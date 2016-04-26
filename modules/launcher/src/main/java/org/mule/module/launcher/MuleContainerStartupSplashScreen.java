@@ -7,6 +7,7 @@
 package org.mule.module.launcher;
 
 import static com.google.common.collect.Collections2.filter;
+import static org.mule.api.config.MuleProperties.MULE_RUNTIME_VERBOSE;
 import static org.mule.module.launcher.MuleFoldersUtil.getUserLibFolder;
 import org.mule.api.MuleContext;
 import org.mule.api.agent.Agent;
@@ -81,8 +82,11 @@ public class MuleContainerStartupSplashScreen extends SplashScreen
         {
             doBody("Security model: " + SecurityUtils.getSecurityModel());
         }
-        listPatchesIfPresent();
-        listMuleSystemProperties();
+        if (Boolean.parseBoolean(System.getProperty(MULE_RUNTIME_VERBOSE, "true")))
+        {
+            listPatchesIfPresent();
+            listMuleSystemProperties();
+        }
     }
 
     //TODO: Perhaps we could move this to MuleDeploymentService and use it here and in AritfactDescriptor to populate this data to ArtifactRuntimeInfo

@@ -6,9 +6,19 @@
  */
 package org.mule.module.launcher.descriptor;
 
+import static org.mule.module.launcher.MuleFoldersUtil.LIB_FOLDER;
+import static org.mule.module.launcher.MuleFoldersUtil.getDomainFolder;
+
+import java.io.File;
+import java.util.List;
+
 /**
  * Represents the description of a domain.
  */
 public class DomainDescriptor extends ArtifactDescriptor
 {
+    public List<String> getLibraries()
+    {
+        return getLibraries(new File(getDomainFolder(this.getName()), LIB_FOLDER));
+    }
 }

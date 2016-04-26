@@ -6,14 +6,12 @@
  */
 package org.mule.module.launcher.descriptor;
 
+import static org.mule.module.launcher.MuleFoldersUtil.getAppLibFolder;
 import org.mule.config.bootstrap.ArtifactRuntimeInfo;
-import org.mule.module.launcher.MuleFoldersUtil;
 import org.mule.module.launcher.plugin.PluginDescriptor;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -168,20 +166,7 @@ public class ApplicationDescriptor extends ArtifactDescriptor
 
     public List<String> getLibraries()
     {
-        File appLib = MuleFoldersUtil.getAppLibFolder(this.getName());
-        if (appLib.exists())
-        {
-            String[] appLibraries = appLib.list(new FilenameFilter()
-            {
-                @Override
-                public boolean accept(File dir, String name)
-                {
-                    return name.endsWith(".jar");
-                }
-            });
-            return Arrays.asList(appLibraries);
-        }
-        return new ArrayList<>(0);
+        return getLibraries(getAppLibFolder(this.getName()));
     }
 
     public Set<String> getPluginNames()
@@ -202,7 +187,7 @@ public class ApplicationDescriptor extends ArtifactDescriptor
     public ArtifactRuntimeInfo getRuntimeInfo()
     {
         return new ArtifactRuntimeInfo(getName(), isRedeploymentEnabled(), Collections.unmodifiableSet(getLoaderOverride()),
-                                       getDomain(), Collections.unmodifiableMap(getAppProperties()), getLogConfigFile().getAbsolutePath(), getPluginNames(), Collections.unmodifiableList(Arrays.asList(sharedPluginLibs)),
+                                       getDomain(), Collections.unmodifiableMap(getAppProperties()), getLogConfigFile(), getPluginNames(), Collections.unmodifiableList(Arrays.asList(sharedPluginLibs)),
                                         getLibraries());
     }
 

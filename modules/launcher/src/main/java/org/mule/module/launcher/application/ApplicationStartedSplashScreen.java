@@ -6,33 +6,27 @@
  */
 package org.mule.module.launcher.application;
 
+import org.mule.api.config.MuleProperties;
 import org.mule.module.launcher.descriptor.ApplicationDescriptor;
 import org.mule.util.SplashScreen;
-
-import java.util.Set;
 
 public class ApplicationStartedSplashScreen extends SplashScreen
 {
     public void doBody(ApplicationDescriptor descriptor)
     {
         doBody(String.format("Started app '%s'", descriptor.getName()));
-        listAppProperties(descriptor);
-        listPlugins(descriptor);
-        listLibraries(descriptor);
-        listOverrides(descriptor);
+        if (Boolean.parseBoolean(System.getProperty(MuleProperties.MULE_RUNTIME_VERBOSE, "true")))
+        {
+            listAppProperties(descriptor);
+            listPlugins(descriptor);
+            listLibraries(descriptor);
+            listOverrides(descriptor);
+        }
     }
 
     private void listPlugins(ApplicationDescriptor descriptor)
     {
-        Set<String> pluginNames = descriptor.getPluginNames();
-        if (!pluginNames.isEmpty())
-        {
-            doBody("Application plugins:");
-            for (String pluginName : pluginNames)
-            {
-                doBody(String.format(VALUE_FORMAT, pluginName));
-            }
-        }
+        listItems(descriptor.getPluginNames(), "Application plugins:");
     }
 
     private void listAppProperties(ApplicationDescriptor descriptor)

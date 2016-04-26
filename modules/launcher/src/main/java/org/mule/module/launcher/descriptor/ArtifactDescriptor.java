@@ -9,8 +9,13 @@ package org.mule.module.launcher.descriptor;
 import org.mule.config.bootstrap.ArtifactRuntimeInfo;
 import org.mule.module.launcher.artifact.Artifact;
 
+import java.io.File;
+import java.io.FilenameFilter;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -57,5 +62,22 @@ public class ArtifactDescriptor
     public ArtifactRuntimeInfo getRuntimeInfo()
     {
         return new ArtifactRuntimeInfo(getName(), isRedeploymentEnabled(), Collections.unmodifiableSet(getLoaderOverride()));
+    }
+
+    protected List<String> getLibraries(File libDirectory)
+    {
+        if (libDirectory.exists())
+        {
+            String[] libraries = libDirectory.list(new FilenameFilter()
+            {
+                @Override
+                public boolean accept(File dir, String name)
+                {
+                    return name.endsWith(".jar");
+                }
+            });
+            return Arrays.asList(libraries);
+        }
+        return new ArrayList<>(0);
     }
 }
