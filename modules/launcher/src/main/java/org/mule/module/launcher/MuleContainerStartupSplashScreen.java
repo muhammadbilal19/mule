@@ -6,8 +6,11 @@
  */
 package org.mule.module.launcher;
 
+import static com.google.common.collect.Collections2.filter;
+import static org.mule.module.launcher.MuleFoldersUtil.getUserLibFolder;
 import org.mule.api.MuleContext;
 import org.mule.api.agent.Agent;
+import org.mule.api.config.MuleProperties;
 import org.mule.config.MuleManifest;
 import org.mule.config.i18n.CoreMessages;
 import org.mule.util.NetworkUtils;
@@ -15,8 +18,13 @@ import org.mule.util.SecurityUtils;
 import org.mule.util.SplashScreen;
 import org.mule.util.StringUtils;
 
+import com.google.common.base.Predicate;
+
+import java.io.File;
+import java.io.FilenameFilter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
@@ -73,6 +81,38 @@ public class MuleContainerStartupSplashScreen extends SplashScreen
         {
             doBody("Security model: " + SecurityUtils.getSecurityModel());
         }
+        listPatchesIfPresent();
+        listMuleSystemProperties();
+    }
+
+    private void listPatchesIfPresent()
+    {
+        File patchesDirectory = getUserLibFolder();
+        if (patchesDirectory != null && patchesDirectory.exists())
+        {
+            String[] patches = patchesDirectory.list(new FilenameFilter()
+            {
+                @Override
+                public boolean accept(File dir, String name)
+                {
+                    return name.startsWith("SE-");
+                }
+            });
+            listItems(Arrays.asList(patches), "Applied patches:");
+        }
+    }
+
+    private void listMuleSystemProperties()
+    {
+        Collection<String> muleProperties = filter(System.getProperties().stringPropertyNames(), new Predicate<String>()
+        {
+            @Override
+            public boolean apply(String property)
+            {
+                return property.startsWith(MuleProperties.SYSTEM_PROPERTY_PREFIX);
+            }
+        });
+        listFilteredItems(System.getProperties(), muleProperties, "Mule system properties:");
     }
 
     @Override
