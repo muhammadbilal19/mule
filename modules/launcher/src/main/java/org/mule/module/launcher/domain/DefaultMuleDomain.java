@@ -180,7 +180,7 @@ public class DefaultMuleDomain implements Domain
                     {
                         muleContextFactory.addListener(new MuleContextDeploymentListener(getArtifactName(), deploymentListener));
                     }
-                    DomainMuleContextBuilder domainMuleContextBuilder = new DomainMuleContextBuilder(descriptor.getName());
+                    DomainMuleContextBuilder domainMuleContextBuilder = new DomainMuleContextBuilder(descriptor);
                     muleContext = muleContextFactory.createMuleContext(builders, domainMuleContextBuilder);
                 }
             }

@@ -6,12 +6,19 @@
  */
 package org.mule.module.launcher.descriptor;
 
+import org.mule.config.bootstrap.ArtifactRuntimeInfo;
+import org.mule.module.launcher.MuleFoldersUtil;
 import org.mule.module.launcher.plugin.PluginDescriptor;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -156,6 +163,47 @@ public class ApplicationDescriptor extends ArtifactDescriptor
     public void setPackagesToScan(String packages)
     {
         this.packagesToScan = packages;
+    }
+
+
+    public List<String> getLibraries()
+    {
+        File appLib = MuleFoldersUtil.getAppLibFolder(this.getName());
+        if (appLib.exists())
+        {
+            String[] appLibraries = appLib.list(new FilenameFilter()
+            {
+                @Override
+                public boolean accept(File dir, String name)
+                {
+                    return name.endsWith(".jar");
+                }
+            });
+            return Arrays.asList(appLibraries);
+        }
+        return new ArrayList<>(0);
+    }
+
+    public Set<String> getPluginNames()
+    {
+        Set<String> pluginNames = new HashSet<>(0);
+        if (!getPlugins().isEmpty())
+        {
+            for (PluginDescriptor plugin : getPlugins())
+            {
+                pluginNames.add(plugin.getName());
+            }
+        }
+        return pluginNames;
+    }
+
+
+    @Override
+    public ArtifactRuntimeInfo getRuntimeInfo()
+    {
+        return new ArtifactRuntimeInfo(getName(), isRedeploymentEnabled(), Collections.unmodifiableSet(getLoaderOverride()),
+                                       getDomain(), Collections.unmodifiableMap(getAppProperties()), getLogConfigFile().getAbsolutePath(), getPluginNames(), Collections.unmodifiableList(Arrays.asList(sharedPluginLibs)),
+                                        getLibraries());
     }
 
 }

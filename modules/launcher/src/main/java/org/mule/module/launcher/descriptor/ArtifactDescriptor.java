@@ -6,8 +6,10 @@
  */
 package org.mule.module.launcher.descriptor;
 
+import org.mule.config.bootstrap.ArtifactRuntimeInfo;
 import org.mule.module.launcher.artifact.Artifact;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -50,5 +52,10 @@ public class ArtifactDescriptor
     public void setRedeploymentEnabled(boolean redeploymentEnabled)
     {
         this.redeploymentEnabled = redeploymentEnabled;
+    }
+
+    public ArtifactRuntimeInfo getRuntimeInfo()
+    {
+        return new ArtifactRuntimeInfo(getName(), isRedeploymentEnabled(), Collections.unmodifiableSet(getLoaderOverride()));
     }
 }

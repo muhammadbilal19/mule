@@ -85,6 +85,7 @@ public class MuleContainerStartupSplashScreen extends SplashScreen
         listMuleSystemProperties();
     }
 
+    //TODO: Perhaps we could move this to MuleDeploymentService and use it here and in AritfactDescriptor to populate this data to ArtifactRuntimeInfo
     private void listPatchesIfPresent()
     {
         File patchesDirectory = getUserLibFolder();
@@ -102,6 +103,7 @@ public class MuleContainerStartupSplashScreen extends SplashScreen
         }
     }
 
+    //TODO: Perhaps we could move this to MuleDeploymentService and use it here and in AritfactDescriptor to populate this data to ArtifactRuntimeInfo
     private void listMuleSystemProperties()
     {
         Collection<String> muleProperties = filter(System.getProperties().stringPropertyNames(), new Predicate<String>()

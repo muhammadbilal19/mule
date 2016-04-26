@@ -34,6 +34,7 @@ public class ApplicationMuleContextBuilder extends DefaultMuleContextBuilder
     {
         DefaultMuleContext muleContext = super.createDefaultMuleContext();
         muleContext.setArtifactType(APP);
+        muleContext.setArtifactRuntimeInfo(desc.getRuntimeInfo());
         return muleContext;
     }
 

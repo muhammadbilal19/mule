@@ -6,14 +6,9 @@
  */
 package org.mule.module.launcher.application;
 
-import static org.mule.module.launcher.MuleFoldersUtil.getAppLibFolder;
 import org.mule.module.launcher.descriptor.ApplicationDescriptor;
-import org.mule.module.launcher.plugin.PluginDescriptor;
 import org.mule.util.SplashScreen;
 
-import java.io.File;
-import java.io.FilenameFilter;
-import java.util.Arrays;
 import java.util.Set;
 
 public class ApplicationStartedSplashScreen extends SplashScreen
@@ -29,13 +24,13 @@ public class ApplicationStartedSplashScreen extends SplashScreen
 
     private void listPlugins(ApplicationDescriptor descriptor)
     {
-        Set<PluginDescriptor> plugins = descriptor.getPlugins();
-        if (!plugins.isEmpty())
+        Set<String> pluginNames = descriptor.getPluginNames();
+        if (!pluginNames.isEmpty())
         {
             doBody("Application plugins:");
-            for (PluginDescriptor plugin : plugins)
+            for (String pluginName : pluginNames)
             {
-                doBody(String.format(VALUE_FORMAT, plugin.getName()));
+                doBody(String.format(VALUE_FORMAT, pluginName));
             }
         }
     }
@@ -52,19 +47,6 @@ public class ApplicationStartedSplashScreen extends SplashScreen
 
     private void listLibraries(ApplicationDescriptor descriptor)
     {
-        File appLib = getAppLibFolder(descriptor.getName());
-        if (appLib.exists())
-        {
-            String[] appLibraries = appLib.list(new FilenameFilter()
-            {
-                @Override
-                public boolean accept(File dir, String name)
-                {
-                    return name.endsWith(".jar");
-                }
-            });
-            listItems(Arrays.asList(appLibraries), "Application libraries:");
-        }
+        listItems(descriptor.getLibraries(), "Application libraries:");
     }
-
 }

@@ -7,7 +7,6 @@
 package org.mule.module.launcher.domain;
 
 import static org.mule.config.bootstrap.ArtifactType.DOMAIN;
-
 import org.mule.DefaultMuleContext;
 import org.mule.api.config.MuleConfiguration;
 import org.mule.api.context.notification.ClusterNodeNotificationListener;
@@ -27,6 +26,7 @@ import org.mule.context.notification.ManagementNotification;
 import org.mule.context.notification.MuleContextNotification;
 import org.mule.context.notification.SecurityNotification;
 import org.mule.context.notification.ServerNotificationManager;
+import org.mule.module.launcher.descriptor.DomainDescriptor;
 
 /**
  * Builder for domain MuleContext instance.
@@ -34,11 +34,11 @@ import org.mule.context.notification.ServerNotificationManager;
 public class DomainMuleContextBuilder extends DefaultMuleContextBuilder
 {
 
-    private final String domainId;
+    private final DomainDescriptor descriptor;
 
-    public DomainMuleContextBuilder(String domainId)
+    public DomainMuleContextBuilder(DomainDescriptor descriptor)
     {
-        this.domainId = domainId;
+        this.descriptor = descriptor;
     }
 
     @Override
@@ -46,6 +46,7 @@ public class DomainMuleContextBuilder extends DefaultMuleContextBuilder
     {
         DefaultMuleContext muleContext = super.createDefaultMuleContext();
         muleContext.setArtifactType(DOMAIN);
+        muleContext.setArtifactRuntimeInfo(descriptor.getRuntimeInfo());
         return muleContext;
     }
 
@@ -53,8 +54,8 @@ public class DomainMuleContextBuilder extends DefaultMuleContextBuilder
     protected MuleConfiguration getMuleConfiguration()
     {
         DefaultMuleConfiguration defaultMuleConfiguration = new DefaultMuleConfiguration(true);
-        defaultMuleConfiguration.setDomainId(domainId);
-        defaultMuleConfiguration.setId(domainId);
+        defaultMuleConfiguration.setDomainId(descriptor.getName());
+        defaultMuleConfiguration.setId(descriptor.getName());
         return defaultMuleConfiguration;
     }
 

@@ -32,6 +32,7 @@ import org.mule.api.serialization.ObjectSerializer;
 import org.mule.api.store.ListableObjectStore;
 import org.mule.api.store.ObjectStoreManager;
 import org.mule.api.util.StreamCloserService;
+import org.mule.config.bootstrap.ArtifactRuntimeInfo;
 import org.mule.config.bootstrap.ArtifactType;
 import org.mule.context.notification.NotificationException;
 import org.mule.context.notification.ServerNotificationManager;
@@ -387,6 +388,11 @@ public interface MuleContext extends Lifecycle
      * @since 3.8.0
      */
     Collection<ExceptionContextProvider> getExceptionContextProviders();
+
+    /**
+     * @return info related to the runtime configuration for the artifact running under this context
+     */
+    ArtifactRuntimeInfo getArtifactRuntimeInfo();
 
 }
 

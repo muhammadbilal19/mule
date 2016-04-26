@@ -49,6 +49,7 @@ import org.mule.client.DefaultLocalMuleClient;
 import org.mule.config.ClusterConfiguration;
 import org.mule.config.DefaultMuleConfiguration;
 import org.mule.config.NullClusterConfiguration;
+import org.mule.config.bootstrap.ArtifactRuntimeInfo;
 import org.mule.config.bootstrap.ArtifactType;
 import org.mule.config.i18n.CoreMessages;
 import org.mule.context.notification.MuleContextNotification;
@@ -199,6 +200,10 @@ public class DefaultMuleContext implements MuleContext
      */
     private ArtifactType artifactType;
 
+    /**
+     * The {@link ArtifactRuntimeInfo} that defines the runtine info used to run the application on this context.
+     */
+    private ArtifactRuntimeInfo artifactRuntimeInfo;
     /**
      * @deprecated Use empty constructor instead and use setter for dependencies.
      */
@@ -1122,6 +1127,16 @@ public class DefaultMuleContext implements MuleContext
     public void setArtifactType(ArtifactType artifactType)
     {
         this.artifactType = artifactType;
+    }
+
+    public ArtifactRuntimeInfo getArtifactRuntimeInfo()
+    {
+        return artifactRuntimeInfo;
+    }
+
+    public void setArtifactRuntimeInfo(ArtifactRuntimeInfo artifactRuntimeInfo)
+    {
+        this.artifactRuntimeInfo = artifactRuntimeInfo;
     }
 
     @Override
