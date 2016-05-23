@@ -8,14 +8,15 @@ package org.mule.runtime.module.cxf;
 
 import static org.mule.runtime.core.PropertyScope.OUTBOUND;
 import static org.mule.runtime.module.http.api.HttpConstants.ResponseProperties.HTTP_STATUS_PROPERTY;
+import static reactor.core.publisher.Flux.error;
+import static reactor.core.publisher.Flux.from;
+import static reactor.core.publisher.Mono.justOrEmpty;
 import org.mule.runtime.core.DefaultMuleMessage;
-import org.mule.runtime.core.NonBlockingVoidMuleEvent;
 import org.mule.runtime.core.VoidMuleEvent;
 import org.mule.runtime.core.api.MessagingException;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleException;
 import org.mule.runtime.core.api.MuleMessage;
-import org.mule.runtime.core.api.NonBlockingSupported;
 import org.mule.runtime.core.api.config.MuleProperties;
 import org.mule.runtime.core.api.connector.DispatchException;
 import org.mule.runtime.core.api.processor.CloneableMessageProcessor;
@@ -23,10 +24,10 @@ import org.mule.runtime.core.api.processor.MessageProcessor;
 import org.mule.runtime.core.api.transformer.TransformerException;
 import org.mule.runtime.core.config.ExceptionHelper;
 import org.mule.runtime.core.config.i18n.MessageFactory;
-import org.mule.runtime.module.cxf.i18n.CxfMessages;
-import org.mule.runtime.module.cxf.security.WebServiceSecurityException;
 import org.mule.runtime.core.processor.AbstractInterceptingMessageProcessor;
 import org.mule.runtime.core.transformer.types.DataTypeFactory;
+import org.mule.runtime.module.cxf.i18n.CxfMessages;
+import org.mule.runtime.module.cxf.security.WebServiceSecurityException;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -43,7 +44,6 @@ import javax.xml.ws.BindingProvider;
 import javax.xml.ws.Holder;
 
 import org.apache.cxf.endpoint.Client;
-import org.apache.cxf.endpoint.ClientCallback;
 import org.apache.cxf.endpoint.Endpoint;
 import org.apache.cxf.frontend.MethodDispatcher;
 import org.apache.cxf.interceptor.Fault;
@@ -51,12 +51,13 @@ import org.apache.cxf.interceptor.StaxInEndingInterceptor;
 import org.apache.cxf.message.ExchangeImpl;
 import org.apache.cxf.service.model.BindingOperationInfo;
 import org.apache.cxf.ws.addressing.WSAContextUtils;
+import org.reactivestreams.Publisher;
 
 /**
  * The CxfOutboundMessageProcessor performs outbound CXF processing, sending an event
  * through the CXF client, then on to the next MessageProcessor.
  */
-public class CxfOutboundMessageProcessor extends AbstractInterceptingMessageProcessor implements CloneableMessageProcessor, NonBlockingSupported
+public class CxfOutboundMessageProcessor extends AbstractInterceptingMessageProcessor implements CloneableMessageProcessor
 {
 
     private CxfPayloadToArguments payloadToArguments = CxfPayloadToArguments.NULL_PAYLOAD_AS_PARAMETER;
@@ -114,6 +115,21 @@ public class CxfOutboundMessageProcessor extends AbstractInterceptingMessageProc
             return null;
         }
         return args;
+    }
+
+    @Override
+    public Publisher<MuleEvent> apply(Publisher<MuleEvent> publisher)
+    {
+        return from(publisher).flatMap(event -> {
+            try
+            {
+                return justOrEmpty(process(event));
+            }
+            catch (MuleException e)
+            {
+                return error(e);
+            }
+        });
     }
 
     public MuleEvent process(MuleEvent event) throws MuleException
@@ -258,36 +274,8 @@ public class CxfOutboundMessageProcessor extends AbstractInterceptingMessageProc
         // mule will close the stream so don't let cxf, otherwise cxf will close it too early
         exchange.put(StaxInEndingInterceptor.STAX_IN_NOCLOSE, Boolean.TRUE);
 
-        if (event.isAllowNonBlocking() && event.getReplyToHandler() != null)
-        {
-            client.invoke(new ClientCallback()
-            {
-                @Override
-                public void handleResponse(Map<String, Object> ctx, Object[] res)
-                {
-                    try
-                    {
-                        event.getReplyToHandler().processReplyTo(buildResponseMessage(event, responseHolder.value, res), null, null);
-                    }
-                    catch (MuleException ex)
-                    {
-                        handleException(ctx, ex);
-                    }
-                }
-
-                @Override
-                public void handleException(Map<String, Object> ctx, Throwable ex)
-                {
-                    event.getReplyToHandler().processExceptionReplyTo(wrapException(responseHolder.value, ex), null);
-                }
-            }, bop, getArgs(event), ctx, exchange);
-            return NonBlockingVoidMuleEvent.getInstance();
-        }
-        else
-        {
-            Object[] response = client.invoke(bop, getArgs(event), ctx, exchange);
-            return buildResponseMessage(event, responseHolder.value, response);
-        }
+        Object[] response = client.invoke(bop, getArgs(event), ctx, exchange);
+        return buildResponseMessage(event, responseHolder.value, response);
     }
 
     public Method getMethod(MuleEvent event) throws Exception

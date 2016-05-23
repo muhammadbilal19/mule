@@ -6,6 +6,10 @@
  */
 package org.mule.runtime.core.processor.chain;
 
+import static org.mule.runtime.core.execution.ExceptionToMessagingExceptionExecutionInterceptor.putContext;
+import static org.mule.runtime.core.execution.MessageProcessorNotificationExecutionInterceptor.fireNotification;
+import org.mule.runtime.core.DefaultMuleEvent;
+import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.OptimizedRequestContext;
 import org.mule.runtime.core.VoidMuleEvent;
 import org.mule.runtime.core.api.MessagingException;
@@ -14,23 +18,30 @@ import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleException;
 import org.mule.runtime.core.api.component.Component;
 import org.mule.runtime.core.api.construct.FlowConstruct;
+import org.mule.runtime.core.api.construct.Pipeline;
 import org.mule.runtime.core.api.processor.MessageProcessor;
 import org.mule.runtime.core.api.processor.MessageProcessorChain;
-import org.mule.runtime.core.api.processor.RequestReplyReplierMessageProcessor;
+import org.mule.runtime.core.api.processor.ProcessingStrategy;
 import org.mule.runtime.core.api.transformer.Transformer;
 import org.mule.runtime.core.api.transport.LegacyOutboundEndpoint;
-import org.mule.runtime.core.construct.Flow;
+import org.mule.runtime.core.context.notification.MessageProcessorNotification;
+import org.mule.runtime.core.context.notification.ServerNotificationManager;
 import org.mule.runtime.core.execution.MessageProcessorExecutionTemplate;
 import org.mule.runtime.core.routing.MessageFilter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Function;
+
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
 
 public class DefaultMessageProcessorChain extends AbstractMessageProcessorChain
 {
     protected MessageProcessorExecutionTemplate messageProcessorExecutionTemplate = MessageProcessorExecutionTemplate.createExecutionTemplate();
+    protected ServerNotificationManager notificationManager;
 
     protected DefaultMessageProcessorChain(List<MessageProcessor> processors)
     {
@@ -70,100 +81,125 @@ public class DefaultMessageProcessorChain extends AbstractMessageProcessorChain
     @Override
     protected MuleEvent doProcess(MuleEvent event) throws MuleException
     {
-        if (event.getMuleContext() != null
-            && event.getMuleContext().getConfiguration().isFlowEndingWithOneWayEndpointReturnsNull())
-        {
-            return doProcessFlowEndingWithOneWayEndpointReturnsNull(event);
-        }
-        else
-        {
-            return new ProcessorExecutorFactory().createProcessorExecutor(event, processors,
-                                                                          messageProcessorExecutionTemplate, true).execute();
-        }
-    }
-
-    /*
-     * Using old implementation 100% as is.
-     */
-    private MuleEvent doProcessFlowEndingWithOneWayEndpointReturnsNull(MuleEvent event)
-        throws MessagingException
-    {
-        FlowConstruct flowConstruct = event.getFlowConstruct();
-        MuleEvent currentEvent = event;
-        MuleEvent resultEvent;
-        MuleEvent copy = null;
-        Iterator<MessageProcessor> processorIterator = processors.iterator();
-        MessageProcessor processor = null;
-        if (processorIterator.hasNext())
-        {
-            processor = processorIterator.next();
-        }
-        boolean resultWasNull = false;
-        while (processor != null)
-        {
-            MessageProcessor nextProcessor = null;
-            if (processorIterator.hasNext())
-            {
-                nextProcessor = processorIterator.next();
-            }
-
-            if (flowConstruct instanceof Flow && nextProcessor != null
-                && !(processor instanceof Transformer || processor instanceof MessageFilter || processor instanceof Component
-                     || (processor instanceof LegacyOutboundEndpoint && !((LegacyOutboundEndpoint) processor).mayReturnVoidEvent())))
-            {
-                copy = OptimizedRequestContext.criticalSetEvent(currentEvent);
-            }
-
-            resultEvent = messageProcessorExecutionTemplate.execute(processor, currentEvent);
-
-            if (resultWasNull && processor instanceof RequestReplyReplierMessageProcessor)
-            {
-                // reply-to processing should not resurrect a dead event
-                resultEvent = null;
-            }
-
-            if (resultEvent != null && !VoidMuleEvent.getInstance().equals(resultEvent))
-            {
-                resultWasNull = false;
-                currentEvent = resultEvent;
-            }
-            else if (VoidMuleEvent.getInstance().equals(resultEvent))
-            {
-                if (flowConstruct instanceof Flow && nextProcessor != null)
-                {
-                    resultWasNull = true;
-                    // // In a flow when a MessageProcessor returns null the next
-                    // processor acts as an implicit
-                    // // branch receiving a copy of the message used for previous
-                    // MessageProcessor
-                    if (copy != null)
-                    {
-                        currentEvent = copy;
-                    }
-                    else
-                    {
-                        // this should not happen
-                        currentEvent = OptimizedRequestContext.criticalSetEvent(currentEvent);
-                    }
-                }
-                else
-                {
-                    // But in a service we don't do any implicit branching.
-                    return VoidMuleEvent.getInstance();
-                }
-            }
-            else if (resultEvent == null)
-            {
-                return null;
-            }
-            processor = nextProcessor;
-        }
-        return currentEvent;
+        return new ProcessorExecutorFactory().createProcessorExecutor(event, processors, messageProcessorExecutionTemplate, true).execute();
     }
 
     @Override
     public void setMuleContext(MuleContext context)
     {
         super.setMuleContext(context);
+        notificationManager = context.getNotificationManager();
+    }
+
+
+    @Override
+    public MuleEvent process(MuleEvent event) throws MuleException
+    {
+        return doProcess(event);
+    }
+
+    @Override
+    public void setFlowConstruct(FlowConstruct flowConstruct)
+    {
+        super.setFlowConstruct(flowConstruct);
+    }
+
+
+    @Override
+    public Publisher<MuleEvent> apply(Publisher<MuleEvent> publisher)
+    {
+        Flux<MuleEvent> stream = Flux.from(publisher);
+        for (MessageProcessor processor : processors)
+        {
+            if (flowConstruct instanceof Pipeline)
+            {
+                ProcessingStrategy processingStrategy = ((Pipeline) flowConstruct).getProcessingStrategy();
+                stream = stream.compose(processingStrategy.onProcessor(processor, invokeProcessor(processor)));
+            }
+            else
+            {
+                stream = stream.compose(invokeProcessor(processor));
+            }
+        }
+        return stream;
+    }
+
+    private Function<Publisher<MuleEvent>, Publisher<MuleEvent>> invokeProcessor(MessageProcessor processor)
+    {
+        if (!(processor instanceof Transformer || processor instanceof MessageFilter || processor instanceof Component
+              || (processor instanceof LegacyOutboundEndpoint && !((LegacyOutboundEndpoint) processor)
+                .mayReturnVoidEvent())))
+        {
+            return publisher -> Flux.from(publisher)
+                    .doOnNext(preNotification(processor))
+                    .concatMap(event ->
+                               {
+                                   MuleEvent copy = new DefaultMuleEvent(new DefaultMuleMessage(event.getMessage()), event);
+                                   OptimizedRequestContext.unsafeSetEvent(event);
+                                   return Flux.just(event)
+                                           .compose(processor)
+                                           .mapError(wrapException(processor, event))
+                                           .map(result -> VoidMuleEvent.getInstance().equals(result) ?
+                                                          OptimizedRequestContext.unsafeSetEvent(copy) : result)
+                                           .doOnNext(postNotification(processor))
+                                           .doOnError(MessagingException.class, errorNotification(processor));
+                               });
+        }
+        else
+        {
+            return publisher -> Flux.from(publisher)
+                    .doOnNext(preNotification(processor))
+                    .doOnNext(event -> OptimizedRequestContext.unsafeSetEvent(event))
+                    .compose(processor)
+                    .mapError(wrapException(processor, null))
+                    .doOnNext(postNotification(processor))
+                    .doOnError(MessagingException.class, errorNotification(processor));
+        }
+    }
+
+    private Consumer<MuleEvent> preNotification(MessageProcessor processor)
+    {
+        return event -> {
+            if (event.isNotificationsEnabled())
+            {
+                fireNotification(event.getMuleContext().getNotificationManager(), event.getFlowConstruct(), event, processor, null,
+                                 MessageProcessorNotification.MESSAGE_PROCESSOR_PRE_INVOKE);
+            }
+        };
+    }
+    private Consumer<MuleEvent> postNotification(MessageProcessor processor)
+    {
+        return event -> {
+            if (event.isNotificationsEnabled()){
+                fireNotification(event.getMuleContext().getNotificationManager(), event.getFlowConstruct(), event, processor, null,
+                                 MessageProcessorNotification.MESSAGE_PROCESSOR_POST_INVOKE);
+
+            }};
+    }
+
+    private Consumer<MessagingException> errorNotification(MessageProcessor processor)
+    {
+        return exception -> {
+            if (exception.getEvent().isNotificationsEnabled())
+            {
+                fireNotification(exception.getEvent().getMuleContext().getNotificationManager(), exception.getEvent().getFlowConstruct(), exception.getEvent(),
+                                 processor, exception, MessageProcessorNotification.MESSAGE_PROCESSOR_POST_INVOKE);
+            }
+        };
+    }
+
+    private Function<Throwable, MessagingException> wrapException(MessageProcessor processor, MuleEvent event)
+    {
+        return throwable -> {
+            if (throwable instanceof MessagingException)
+            {
+                MessagingException msgException = (MessagingException) throwable;
+                return putContext(msgException, processor, msgException.getEvent());
+            }
+            else
+            {
+                return putContext(new MessagingException(event, throwable, processor), processor, event);
+            }
+        };
     }
 }

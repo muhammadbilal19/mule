@@ -11,6 +11,7 @@ import org.mule.runtime.core.api.MuleMessage;
 import org.mule.functional.junit4.FunctionalTestCase;
 import org.mule.runtime.core.lifecycle.LifecycleTrackerProcessor;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class SubFlowTestCase extends FunctionalTestCase
@@ -22,6 +23,7 @@ public class SubFlowTestCase extends FunctionalTestCase
     }
 
     @Test
+    @Ignore("MULE-9734")
     public void testProcessorChainViaProcessorRef() throws Exception
     {
         MuleMessage result = flowRunner("ProcessorChainViaProcessorRef").withPayload("").run().getMessage();
@@ -34,6 +36,7 @@ public class SubFlowTestCase extends FunctionalTestCase
     }
 
     @Test
+    @Ignore("MULE-9734")
     public void testProcessorChainViaFlowRef() throws Exception
     {
         MuleMessage result = flowRunner("ProcessorChainViaFlowRef").withPayload("").run().getMessage();
@@ -47,6 +50,7 @@ public class SubFlowTestCase extends FunctionalTestCase
     }
     
     @Test
+    @Ignore("MULE-9734")
     public void testSubFlowViaProcessorRef() throws Exception
     {
         MuleMessage result = flowRunner("SubFlowViaProcessorRef").withPayload("").run().getMessage();
@@ -59,6 +63,7 @@ public class SubFlowTestCase extends FunctionalTestCase
     }
 
     @Test
+    @Ignore("MULE-9734")
     public void testSubFlowViaFlowRef() throws Exception
     {
         MuleMessage result = flowRunner("SubFlowViaFlowRef").withPayload("").run().getMessage();

@@ -6,11 +6,14 @@
  */
 package org.mule.runtime.core.processor;
 
+import static reactor.core.publisher.Flux.from;
 import org.mule.runtime.core.AbstractAnnotatedObject;
 import org.mule.runtime.core.VoidMuleEvent;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleException;
+import org.mule.runtime.core.api.construct.FlowConstruct;
+import org.mule.runtime.core.api.construct.FlowConstructAware;
 import org.mule.runtime.core.api.context.MuleContextAware;
 import org.mule.runtime.core.api.processor.InternalMessageProcessor;
 import org.mule.runtime.core.api.processor.MessageProcessor;
@@ -24,6 +27,7 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.reactivestreams.Publisher;
 
 /**
  * Abstract implementation that provides the infrastructure for intercepting message processors.
@@ -32,12 +36,13 @@ import org.apache.commons.logging.LogFactory;
  * attribute.
  */
 public abstract class AbstractInterceptingMessageProcessorBase extends AbstractAnnotatedObject
-        implements MessageProcessor, MuleContextAware, MessageProcessorContainer
+        implements MessageProcessor, MuleContextAware, MessageProcessorContainer, FlowConstructAware
 {
 
     protected Log logger = LogFactory.getLog(getClass());
 
     protected MuleContext muleContext;
+    protected FlowConstruct flowConstruct;
 
     public void setMuleContext(MuleContext context)
     {
@@ -117,4 +122,30 @@ public abstract class AbstractInterceptingMessageProcessorBase extends AbstractA
             NotificationUtils.addMessageProcessorPathElements(Arrays.asList(next), pathElement.getParent());
         }
     }
+
+    @Override
+    public void setFlowConstruct(FlowConstruct flowConstruct)
+    {
+        this.flowConstruct = flowConstruct;
+        if (next instanceof FlowConstructAware)
+        {
+            ((FlowConstructAware) next).setFlowConstruct(flowConstruct);
+        }
+    }
+
+    @Override
+    public Publisher<MuleEvent> apply(Publisher<MuleEvent> publisher)
+    {
+        if (next == null)
+        {
+            return publisher;
+        }
+        return from(publisher).doOnNext(muleEvent -> {
+            if (logger.isTraceEnabled())
+            {
+                logger.trace("Invoking next MessageProcessor: '" + next.getClass().getName() + "' ");
+            }
+        }).as(next);
+    }
+
 }

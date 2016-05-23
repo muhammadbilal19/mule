@@ -7,7 +7,7 @@
 package org.mule.runtime.core.processor;
 
 import static org.mule.runtime.core.util.ClassUtils.isConsumable;
-
+import static reactor.core.publisher.Flux.from;
 import org.mule.runtime.core.DefaultMuleEvent;
 import org.mule.runtime.core.MessageExchangePattern;
 import org.mule.runtime.core.OptimizedRequestContext;
@@ -16,7 +16,6 @@ import org.mule.runtime.core.api.MessagingException;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleException;
 import org.mule.runtime.core.api.MuleMessage;
-import org.mule.runtime.core.api.NonBlockingSupported;
 import org.mule.runtime.core.api.ThreadSafeAccess;
 import org.mule.runtime.core.api.lifecycle.Initialisable;
 import org.mule.runtime.core.api.lifecycle.InitialisationException;
@@ -40,6 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.reactivestreams.Publisher;
 
 /**
  * Processes {@link MuleEvent}'s asynchronously using a {@link MuleWorkManager} to schedule asynchronous
@@ -48,7 +48,7 @@ import org.apache.commons.logging.LogFactory;
  * configured on the inbound endpoint. If a transaction is present then an exception is thrown.
  */
 public class AsyncDelegateMessageProcessor extends AbstractMessageProcessorOwner
-        implements MessageProcessor, Initialisable, Startable, Stoppable, NonBlockingSupported
+        implements MessageProcessor, Initialisable, Startable, Stoppable
 {
 
     protected Log logger = LogFactory.getLog(getClass());
@@ -186,4 +186,9 @@ public class AsyncDelegateMessageProcessor extends AbstractMessageProcessorOwner
         }
     }
 
+    @Override
+    public Publisher<MuleEvent> apply(Publisher<MuleEvent> publisher)
+    {
+        return from(publisher).as(target);
+    }
 }

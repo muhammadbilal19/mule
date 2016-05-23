@@ -10,7 +10,6 @@ import org.mule.runtime.api.execution.CompletionHandler;
 import org.mule.runtime.core.DefaultMuleEvent;
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.VoidMuleEvent;
-import org.mule.runtime.core.api.MessagingException;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleException;
 import org.mule.runtime.core.api.ThreadSafeAccess;
@@ -53,26 +52,19 @@ public class SensingNullMessageProcessor extends AbstractNonBlockingMessageProce
             @Override
             public void run()
             {
-                try
+                sense(event);
+                MuleEvent eventToProcess = event;
+                if (StringUtils.isNotEmpty(appendString))
                 {
-                    sense(event);
-                    MuleEvent eventToProcess = event;
-                    if (StringUtils.isNotEmpty(appendString))
-                    {
-                        eventToProcess = append(eventToProcess);
-                    }
-                    if(eventToProcess instanceof ThreadSafeAccess)
-                    {
-                        // Reset acess given we use same event in new thread
-                        ((ThreadSafeAccess) eventToProcess).resetAccessControl();
-                    }
-                    event.getReplyToHandler().processReplyTo(eventToProcess, null, null);
-                    latch.countDown();
+                    eventToProcess = append(eventToProcess);
                 }
-                catch (MuleException e)
+                if(eventToProcess instanceof ThreadSafeAccess)
                 {
-                    event.getReplyToHandler().processExceptionReplyTo(new MessagingException(event, e), null);
+                    // Reset acess given we use same event in new thread
+                    ((ThreadSafeAccess) eventToProcess).resetAccessControl();
                 }
+                completionHandler.onCompletion(eventToProcess, null);
+                latch.countDown();
             }
         });
     }
@@ -168,5 +160,11 @@ public class SensingNullMessageProcessor extends AbstractNonBlockingMessageProce
         {
             return ObjectUtils.toString(this);
         }
+    }
+
+    @Override
+    public boolean isBlocking()
+    {
+        return enableNonBlocking;
     }
 }
