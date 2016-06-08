@@ -6,9 +6,10 @@
  */
 package org.mule.functional.junit4.runners;
 
-import org.mule.runtime.container.ContainerClassLoaderFactory;
 import org.mule.runtime.module.artifact.classloader.ArtifactClassLoader;
 import org.mule.runtime.module.artifact.classloader.MuleArtifactClassLoader;
+
+import com.google.common.collect.Sets;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.stream.Collectors;
 
@@ -28,22 +30,29 @@ import org.junit.runner.Description;
 import org.junit.runner.Runner;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
-import org.junit.runners.BlockJUnit4ClassRunner;
+import org.junit.runners.JUnit4;
 import org.junit.runners.model.InitializationError;
 
 /**
- * TODO
+ * Runner that creates a similar classloader isolation hierarchy as Mule uses on runtime.
+ * The classloaders here created for running the test have the following hierarchy, from parent to child:
+ * ContainerClassLoader (it also adds junit and org.hamcrest packages as PARENT_ONLY look up strategy)
  */
 public class ArtifactClassloaderTestRunner extends Runner
 {
 
-    public static final String MAVEN_DEPENDECIES_DELIMITER = ":";
-    public static final String DOT_CHARACTER = ".";
-    public static final String MAVEN_COMPILE_SCOPE = "compile";
-    public static final String MAVEN_TEST_SCOPE = "test";
+    private static final String MAVEN_DEPENDENCIES_DELIMITER = ":";
+    private static final String DOT_CHARACTER = ".";
+    private static final String MAVEN_COMPILE_SCOPE = "compile";
+    private static final String TARGET_TEST_CLASSES = "/target/test-classes/";
+    private static final String TARGET_CLASSES = "/target/classes/";
+
+    private static final String DEPENDENCIES_LIST_FILE = "dependencies.list";
+
     private final Object innerRunner;
     private final Class<?> innerRunnerClass;
-    private static ClassLoader classLoader;
+
+    private static ClassLoader artifactClassLoader;
 
     /**
      * Creates a Runner to run {@code klass}
@@ -53,16 +62,11 @@ public class ArtifactClassloaderTestRunner extends Runner
      */
     public ArtifactClassloaderTestRunner(Class<?> klass) throws InitializationError
     {
-        String testFileClassName = klass.getName();
         try
         {
-            if (classLoader == null)
-            {
-                classLoader = buildArtifactClassloader();
-            }
-
-            innerRunnerClass = classLoader.loadClass(BlockJUnit4ClassRunner.class.getName());
-            Class<?> testClass = classLoader.loadClass(testFileClassName);
+            artifactClassLoader = buildArtifactClassloader(klass);
+            innerRunnerClass = artifactClassLoader.loadClass(getDelegateRunningToOn(klass).getName());
+            Class<?> testClass = artifactClassLoader.loadClass(klass.getName());
             innerRunner = innerRunnerClass.cast(innerRunnerClass.getConstructor(Class.class).newInstance(testClass));
         }
         catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
@@ -72,61 +76,100 @@ public class ArtifactClassloaderTestRunner extends Runner
         }
     }
 
-    private ClassLoader buildArtifactClassloader() throws IOException
+    /**
+     * @param testClass
+     * @return the delegate {@link Runner} to be used or {@link JUnit4} if no one is defined.
+     */
+    public Class<? extends Runner> getDelegateRunningToOn(Class<?> testClass)
+    {
+        Class<? extends Runner> runnerClass = JUnit4.class;
+        ArtifactRunningDelegate annotation = testClass.getAnnotation(ArtifactRunningDelegate.class);
+
+        if(annotation != null)
+        {
+            runnerClass = annotation.value();
+        }
+
+        return runnerClass;
+    }
+
+    public String getDependenciesListFileName(Class<?> testClass)
+    {
+        String dependenciesListFileName = DEPENDENCIES_LIST_FILE;
+        ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
+
+        if(annotation != null)
+        {
+            dependenciesListFileName = annotation.dependenciesListFileName();
+        }
+
+        return dependenciesListFileName;
+    }
+
+    public Set<String> getExtraBootPackages(Class<?> testClass)
+    {
+        String extraPackages = "org.junit,junit,org.hamcrest";
+        ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
+
+        if(annotation != null)
+        {
+            extraPackages = annotation.extraBootPackages();
+        }
+
+        return Sets.newHashSet(extraPackages.split(","));
+    }
+
+    private ClassLoader buildArtifactClassloader(Class<?> klass) throws IOException
     {
         ClassLoader classloader = ArtifactClassloaderTestRunner.class.getClassLoader();
-        URL mavenDependenciesFile = classloader.getResource("dependencies.list");
+        URL mavenDependenciesFile = classloader.getResource(getDependenciesListFileName(klass));
         if (mavenDependenciesFile != null)
         {
-            // classpath
+            // get the urls from the launcher classpath
             final URL[] urls = ((URLClassLoader) classloader).getURLs();
 
-            List<String> mavenDependencies = Files.readAllLines(new File(mavenDependenciesFile.getFile()).toPath(), Charset.defaultCharset()).stream().filter(line -> line.length() - line.replace(MAVEN_DEPENDECIES_DELIMITER, "").length() >= 4).sorted().collect(Collectors.toList());
+            // maven-dependency-plugin adds a few extra lines to the top
+            List<String> mavenDependencies = Files.readAllLines(new File(mavenDependenciesFile.getFile()).toPath(),
+                                                                Charset.defaultCharset()).stream()
+                    .filter(line -> line.length() - line.replace(MAVEN_DEPENDENCIES_DELIMITER, "").length() >= 4).collect(Collectors.toList());
 
-            // Build lists
-            List<URL> extensionURLs = new ArrayList<>();
+            // Lists of artifacts to be used by different classloaders
+            List<URL> pluginURLs = new ArrayList<>();
             List<URL> applicationURLs = new ArrayList<>();
 
-            mavenDependencies.stream().forEach(mavenDependency -> {
-                if(isArtifactOf(mavenDependency, MAVEN_COMPILE_SCOPE))
-                {
-                    addURL(extensionURLs, mavenDependency, urls);
-                }
-                else if(isArtifactOf(mavenDependency, MAVEN_TEST_SCOPE))
-                {
-                    //addURL(applicationURLs, mavenDependency, urls);
-                }
-            });
+            // plugin libraries should be all the dependencies with scope 'compile'
+            mavenDependencies.stream().filter(dependencyStringLine -> isArtifactOf(dependencyStringLine, MAVEN_COMPILE_SCOPE)).forEach(mavenDependency -> addURL(pluginURLs, mavenDependency, urls));
 
-            // classes should be added as extension classloader for this artifact
+            // when multi-module is used classes folders should be added as plugin classloader libraries for this artifact
             String currentArtifactFolderName = new File(System.getProperty("user.dir")).getName();
             for (URL url : urls)
             {
                 String file = url.getFile().trim();
-                if(file.endsWith(currentArtifactFolderName + "/target/classes/"))
+                if(file.endsWith(currentArtifactFolderName + TARGET_CLASSES))
                 {
-                    extensionURLs.add(url);
+                    pluginURLs.add(url);
                 }
-                else if(file.endsWith("/target/classes/"))
+                else if(file.endsWith(TARGET_CLASSES))
                 {
                     String fileParent = new File(file).getParentFile().getParentFile().getName();
                     Optional<String> dependency = mavenDependencies.stream().filter(mavenDependency ->
                     {
                         MavenArtifact artifact = parseMavenArtifact(mavenDependency);
                         // Just for the time being use contains but it would be better to have the folders with exactly the same artifactId to improve this filter
+                        // TODO: the folder name of the module should be the same as artifactId in order to improve this check!
                         return artifact.getArtifactId().contains(fileParent) && artifact.getScope().equals(MAVEN_COMPILE_SCOPE);
                     }).findFirst();
                     if(dependency.isPresent())
                     {
-                        extensionURLs.add(url);
+                        pluginURLs.add(url);
                     }
                 }
             }
 
-            // tests should be app classloader
+            // Tests classes should be app classloader
             for (URL url : urls)
             {
-                if(url.getFile().trim().endsWith(currentArtifactFolderName + "/target/test-classes/"))
+                if(url.getFile().trim().endsWith(currentArtifactFolderName + TARGET_TEST_CLASSES))
                 {
                     applicationURLs.add(url);
                 }
@@ -135,14 +178,14 @@ public class ArtifactClassloaderTestRunner extends Runner
             // The container contains anything that is not application either extension classloader urls
             List<URL> containerURLs = new ArrayList<>();
             containerURLs.addAll(Arrays.asList(urls));
-            containerURLs.removeAll(extensionURLs);
+            containerURLs.removeAll(pluginURLs);
             containerURLs.removeAll(applicationURLs);
 
             // Container classloader
-            ArtifactClassLoader containerClassLoader = new ContainerClassLoaderFactory().createContainerClassLoader(ClassLoader.getSystemClassLoader());
+            ArtifactClassLoader containerClassLoader = new TestContainerClassLoaderFactory(getExtraBootPackages(klass)).createContainerClassLoader(ClassLoader.getSystemClassLoader());
 
             // Extension/Plugin classlaoder
-            MuleArtifactClassLoader pluginClassLoader = new MuleArtifactClassLoader("plugin", extensionURLs.toArray(new URL[extensionURLs.size()]), containerClassLoader.getClassLoader(), containerClassLoader.getClassLoaderLookupPolicy());
+            MuleArtifactClassLoader pluginClassLoader = new MuleArtifactClassLoader("plugin", pluginURLs.toArray(new URL[pluginURLs.size()]), containerClassLoader.getClassLoader(), containerClassLoader.getClassLoaderLookupPolicy());
 
             // Application classloader
             classloader = new MuleArtifactClassLoader("application", applicationURLs.toArray(new URL[applicationURLs.size()]), pluginClassLoader.getClassLoader(), pluginClassLoader.getClassLoaderLookupPolicy()).getClassLoader();
@@ -168,7 +211,7 @@ public class ArtifactClassloaderTestRunner extends Runner
 
     private MavenArtifact parseMavenArtifact(String mavenDependencyString)
     {
-        StringTokenizer tokenizer = new StringTokenizer(mavenDependencyString, MAVEN_DEPENDECIES_DELIMITER);
+        StringTokenizer tokenizer = new StringTokenizer(mavenDependencyString, MAVEN_DEPENDENCIES_DELIMITER);
         String groupId = tokenizer.nextToken().trim();
         String artifactId = tokenizer.nextToken().trim();
         String type = tokenizer.nextToken().trim();
@@ -197,7 +240,7 @@ public class ArtifactClassloaderTestRunner extends Runner
         final ClassLoader original = Thread.currentThread().getContextClassLoader();
         try
         {
-            Thread.currentThread().setContextClassLoader(classLoader);
+            Thread.currentThread().setContextClassLoader(artifactClassLoader);
             innerRunnerClass.getMethod("run", RunNotifier.class).invoke(innerRunner, notifier);
         }
         catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
@@ -208,10 +251,11 @@ public class ArtifactClassloaderTestRunner extends Runner
         finally
         {
             Thread.currentThread().setContextClassLoader(original);
+            artifactClassLoader = null;
         }
     }
 
-    private class MavenArtifact implements Comparable<MavenArtifact>
+    private class MavenArtifact
     {
         private String groupId;
         private String artifactId;
@@ -301,16 +345,6 @@ public class ArtifactClassloaderTestRunner extends Runner
             result = 31 * result + version.hashCode();
             result = 31 * result + scope.hashCode();
             return result;
-        }
-
-        @Override
-        public int compareTo(MavenArtifact o)
-        {
-            int compare = groupId.compareTo(o.getGroupId());
-            if(compare == 0) {
-                compare = getArtifactId().compareTo(o.getArtifactId());
-            }
-            return compare;
         }
     }
 }

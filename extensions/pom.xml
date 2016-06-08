@@ -121,9 +121,10 @@
                         <goals>
                             <goal>list</goal>
                         </goals>
-                        <phase>generate-test-resources</phase>
+                        <phase>process-resources</phase>
                         <configuration>
                             <outputFile>${project.build.testOutputDirectory}/dependencies.list</outputFile>
+                            <sort>true</sort>
                         </configuration>
                     </execution>
                 </executions>

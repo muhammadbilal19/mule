@@ -98,8 +98,8 @@ public class ContainerClassLoaderFactory
      */
     public ArtifactClassLoader createContainerClassLoader(final ClassLoader parentClassLoader)
     {
-        final Set<String> parentOnlyPackages = new HashSet<>(BOOT_PACKAGES);
-        parentOnlyPackages.addAll(SYSTEM_PACKAGES);
+        final Set<String> parentOnlyPackages = new HashSet<>(getBootPackages());
+        parentOnlyPackages.addAll(getSystemPackages());
 
         final List<MuleModule> muleModules = moduleDiscoverer.discover();
         final Map<String, ClassLoaderLookupStrategy> lookupStrategies = buildClassLoaderLookupStrategy(muleModules);
@@ -145,6 +145,24 @@ public class ContainerClassLoaderFactory
 
     private FilteringArtifactClassLoader createContainerFilteringClassLoader(List<MuleModule> muleModules, ArtifactClassLoader containerClassLoader)
     {
-        return new FilteringContainerClassLoader(containerClassLoader, new ContainerClassLoaderFilterFactory().create(BOOT_PACKAGES, muleModules));
+        return new FilteringContainerClassLoader(containerClassLoader, new ContainerClassLoaderFilterFactory().create(getBootPackages(), muleModules));
+    }
+
+    /**
+     * @return a {@link Set} of packages that define all the prefixes that must be loaded from the container
+     * classLoader without being filtered
+     */
+    protected Set<String> getBootPackages()
+    {
+        return BOOT_PACKAGES;
+    }
+
+    /**
+     * @return a {@link Set} of packages that define the prefixes that must be loaded only from the container
+     * classLoader, but then are filtered depending on what is part of the exposed API.
+     */
+    protected Set<String> getSystemPackages()
+    {
+        return SYSTEM_PACKAGES;
     }
 }
