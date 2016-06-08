@@ -10,7 +10,6 @@ import static org.junit.Assert.fail;
 import org.mule.functional.functional.FlowAssert;
 import org.mule.functional.functional.FunctionalTestComponent;
 import org.mule.runtime.config.spring.SpringXmlConfigurationBuilder;
-import org.mule.runtime.container.internal.ContainerClassLoaderFactory;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleException;
 import org.mule.runtime.core.api.component.Component;
@@ -179,10 +178,11 @@ public abstract class FunctionalTestCase extends AbstractMuleContextTestCase
     {
         if (!isDisposeContextPerClass() || executionClassLoader == null)
         {
-            executionClassLoader = new ContainerClassLoaderFactory().createContainerClassLoader(getClass().getClassLoader());
+            //executionClassLoader = new ContainerClassLoaderFactory().createContainerClassLoader(getClass().getClassLoader());
         }
 
-        return executionClassLoader.getClassLoader();
+        //return executionClassLoader.getClassLoader();
+        return Thread.currentThread().getContextClassLoader();
     }
 
     @Override
