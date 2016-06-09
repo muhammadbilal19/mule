@@ -15,11 +15,10 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -125,8 +124,12 @@ public class ArtifactClassloaderTestRunner extends Runner
         URL mavenDependenciesFile = classloader.getResource(getDependenciesListFileName(klass));
         if (mavenDependenciesFile != null)
         {
-            // get the urls from the launcher classpath
-            final URL[] urls = ((URLClassLoader) classloader).getURLs();
+            // get the urls from the java.class.path system property (works for maven or when running tests from IDEs)
+            final List<URL> urls = new LinkedList<>();
+            for (String file : System.getProperty("java.class.path").split(":"))
+            {
+                urls.add(new File(file).toURI().toURL());
+            }
 
             // maven-dependency-plugin adds a few extra lines to the top
             List<String> mavenDependencies = Files.readAllLines(new File(mavenDependenciesFile.getFile()).toPath(),
@@ -177,7 +180,7 @@ public class ArtifactClassloaderTestRunner extends Runner
 
             // The container contains anything that is not application either extension classloader urls
             List<URL> containerURLs = new ArrayList<>();
-            containerURLs.addAll(Arrays.asList(urls));
+            containerURLs.addAll(urls);
             containerURLs.removeAll(pluginURLs);
             containerURLs.removeAll(applicationURLs);
 
@@ -199,10 +202,10 @@ public class ArtifactClassloaderTestRunner extends Runner
         return line.endsWith(scope);
     }
 
-    private void addURL(List<URL> listBuilder, String mavenDependencyString, URL[] urls)
+    private void addURL(List<URL> listBuilder, String mavenDependencyString, List<URL> urls)
     {
         MavenArtifact mavenArtifact = parseMavenArtifact(mavenDependencyString);
-        Optional<URL> artifact = Arrays.stream(urls).filter(filePath -> filePath.getFile().contains(mavenArtifact.getGroupIdAsPath() + File.separator + mavenArtifact.getArtifactId())).findFirst();
+        Optional<URL> artifact = urls.stream().filter(filePath -> filePath.getFile().contains(mavenArtifact.getGroupIdAsPath() + File.separator + mavenArtifact.getArtifactId())).findFirst();
         if (artifact.isPresent())
         {
             listBuilder.add(artifact.get());
