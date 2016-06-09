@@ -14,10 +14,17 @@ import com.google.common.collect.Sets;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -31,6 +38,8 @@ import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.JUnit4;
 import org.junit.runners.model.InitializationError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Runner that creates a similar classloader isolation hierarchy as Mule uses on runtime.
@@ -39,6 +48,8 @@ import org.junit.runners.model.InitializationError;
  */
 public class ArtifactClassloaderTestRunner extends Runner
 {
+
+    protected final transient Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private static final String MAVEN_DEPENDENCIES_DELIMITER = ":";
     private static final String DOT_CHARACTER = ".";
@@ -63,13 +74,13 @@ public class ArtifactClassloaderTestRunner extends Runner
     {
         try
         {
+            logger.debug("Running with runner: '{}'", this.getClass().getName());
             artifactClassLoader = buildArtifactClassloader(klass);
             innerRunnerClass = artifactClassLoader.loadClass(getDelegateRunningToOn(klass).getName());
             Class<?> testClass = artifactClassLoader.loadClass(klass.getName());
             innerRunner = innerRunnerClass.cast(innerRunnerClass.getConstructor(Class.class).newInstance(testClass));
         }
-        catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
-                | NoSuchMethodException | SecurityException | ClassNotFoundException | IOException e)
+        catch (Exception e)
         {
             throw new InitializationError(e);
         }
@@ -118,12 +129,15 @@ public class ArtifactClassloaderTestRunner extends Runner
         return Sets.newHashSet(extraPackages.split(","));
     }
 
-    private ClassLoader buildArtifactClassloader(Class<?> klass) throws IOException
+    private ClassLoader buildArtifactClassloader(Class<?> klass) throws IOException, URISyntaxException
     {
         ClassLoader classloader = ArtifactClassloaderTestRunner.class.getClassLoader();
         URL mavenDependenciesFile = classloader.getResource(getDependenciesListFileName(klass));
         if (mavenDependenciesFile != null)
         {
+            Path dependenciesPath = Paths.get(mavenDependenciesFile.toURI());
+            BasicFileAttributes view = Files.getFileAttributeView(dependenciesPath, BasicFileAttributeView.class).readAttributes();
+            logger.debug("Building classloader hierarchy using maven dependency list file: '{}', created: {}, last modified: {}", mavenDependenciesFile, view.creationTime(), view.lastModifiedTime());
             // get the urls from the java.class.path system property (works for maven or when running tests from IDEs)
             final List<URL> urls = new LinkedList<>();
             for (String file : System.getProperty("java.class.path").split(":"))
@@ -185,13 +199,19 @@ public class ArtifactClassloaderTestRunner extends Runner
             containerURLs.removeAll(applicationURLs);
 
             // Container classloader
-            ArtifactClassLoader containerClassLoader = new TestContainerClassLoaderFactory(getExtraBootPackages(klass)).createContainerClassLoader(ClassLoader.getSystemClassLoader());
+            URL[] arrayOfContainerURLs = containerURLs.toArray(new URL[containerURLs.size()]);
+            logger.debug("CONTAINER classloader: {}", Arrays.toString(arrayOfContainerURLs));
+            ArtifactClassLoader containerClassLoader = new TestContainerClassLoaderFactory(getExtraBootPackages(klass)).createContainerClassLoader(new URLClassLoader(arrayOfContainerURLs, getClass().getClassLoader()));
 
             // Extension/Plugin classlaoder
-            MuleArtifactClassLoader pluginClassLoader = new MuleArtifactClassLoader("plugin", pluginURLs.toArray(new URL[pluginURLs.size()]), containerClassLoader.getClassLoader(), containerClassLoader.getClassLoaderLookupPolicy());
+            URL[] arrayOfPluginURLS = pluginURLs.toArray(new URL[pluginURLs.size()]);
+            logger.debug("PLUGIN classloader: {}", Arrays.toString(arrayOfPluginURLS));
+            MuleArtifactClassLoader pluginClassLoader = new MuleArtifactClassLoader("plugin", arrayOfPluginURLS, containerClassLoader.getClassLoader(), containerClassLoader.getClassLoaderLookupPolicy());
 
             // Application classloader
-            classloader = new MuleArtifactClassLoader("application", applicationURLs.toArray(new URL[applicationURLs.size()]), pluginClassLoader.getClassLoader(), pluginClassLoader.getClassLoaderLookupPolicy()).getClassLoader();
+            URL[] arrayOfApplicationURLS = applicationURLs.toArray(new URL[applicationURLs.size()]);
+            logger.debug("APPLICATION classloader: {}", Arrays.toString(arrayOfApplicationURLS));
+            classloader = new MuleArtifactClassLoader("application", arrayOfApplicationURLS, pluginClassLoader.getClassLoader(), pluginClassLoader.getClassLoaderLookupPolicy()).getClassLoader();
         }
 
         return classloader;
