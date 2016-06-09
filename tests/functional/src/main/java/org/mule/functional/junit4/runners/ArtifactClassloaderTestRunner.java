@@ -156,28 +156,9 @@ public class ArtifactClassloaderTestRunner extends Runner
 
             // when multi-module is used classes folders should be added as plugin classloader libraries for this artifact
             String currentArtifactFolderName = new File(System.getProperty("user.dir")).getName();
-            for (URL url : urls)
-            {
-                String file = url.getFile().trim();
-                if (file.endsWith(currentArtifactFolderName + TARGET_CLASSES))
-                {
-                    pluginURLs.add(url);
-                }
-                else if (file.endsWith(TARGET_CLASSES))
-                {
-                    String fileParent = new File(file).getParentFile().getParentFile().getName();
-                    Optional<MavenArtifact> dependency = mavenDependencies.stream().filter(artifact ->
-                                                                                    {
-                                                                                        // Just for the time being use contains but it would be better to have the folders with exactly the same artifactId to improve this filter
-                                                                                        // TODO: the folder name of the module should be the same as artifactId in order to improve this check!
-                                                                                        return artifact.getArtifactId().contains(fileParent) && artifact.getScope().equals(MAVEN_COMPILE_SCOPE);
-                                                                                    }).findFirst();
-                    if (dependency.isPresent())
-                    {
-                        pluginURLs.add(url);
-                    }
-                }
-            }
+
+            // /target-classes only for the current artifact being tested
+            urls.stream().filter(url -> url.getFile().trim().endsWith(currentArtifactFolderName + TARGET_CLASSES)).forEach(url -> pluginURLs.add(url));
 
             // Tests classes should be app classloader
             applicationURLs.addAll(urls.stream().filter(url -> url.getFile().trim().endsWith(currentArtifactFolderName + TARGET_TEST_CLASSES)).collect(Collectors.toList()));
