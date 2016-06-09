@@ -50,8 +50,8 @@ public class ArtifactClassloaderTestRunner extends Runner
 
     protected final transient Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private static final String MAVEN_DEPENDENCIES_DELIMITER = ":";
     private static final String DOT_CHARACTER = ".";
+    private static final String MAVEN_DEPENDENCIES_DELIMITER = ":";
     private static final String MAVEN_COMPILE_SCOPE = "compile";
     private static final String TARGET_TEST_CLASSES = "/target/test-classes/";
     private static final String TARGET_CLASSES = "/target/classes/";
@@ -145,37 +145,34 @@ public class ArtifactClassloaderTestRunner extends Runner
             }
 
             // maven-dependency-plugin adds a few extra lines to the top
-            List<String> mavenDependencies = Files.readAllLines(new File(mavenDependenciesFile.getFile()).toPath(),
-                                                                Charset.defaultCharset()).stream()
-                    .filter(line -> line.length() - line.replace(MAVEN_DEPENDENCIES_DELIMITER, "").length() >= 4).collect(Collectors.toList());
+            List<MavenArtifact> mavenDependencies = toMavenArtifacts(mavenDependenciesFile);
 
             // Lists of artifacts to be used by different classloaders
             List<URL> pluginURLs = new ArrayList<>();
             List<URL> applicationURLs = new ArrayList<>();
 
             // plugin libraries should be all the dependencies with scope 'compile'
-            mavenDependencies.stream().filter(dependencyStringLine -> isArtifactOf(dependencyStringLine, MAVEN_COMPILE_SCOPE)).forEach(mavenDependency -> addURL(pluginURLs, mavenDependency, urls));
+            mavenDependencies.stream().filter(artifact -> artifact.isCompileScope()).forEach(artifact -> addURL(pluginURLs, artifact, urls));
 
             // when multi-module is used classes folders should be added as plugin classloader libraries for this artifact
             String currentArtifactFolderName = new File(System.getProperty("user.dir")).getName();
             for (URL url : urls)
             {
                 String file = url.getFile().trim();
-                if(file.endsWith(currentArtifactFolderName + TARGET_CLASSES))
+                if (file.endsWith(currentArtifactFolderName + TARGET_CLASSES))
                 {
                     pluginURLs.add(url);
                 }
-                else if(file.endsWith(TARGET_CLASSES))
+                else if (file.endsWith(TARGET_CLASSES))
                 {
                     String fileParent = new File(file).getParentFile().getParentFile().getName();
-                    Optional<String> dependency = mavenDependencies.stream().filter(mavenDependency ->
-                    {
-                        MavenArtifact artifact = parseMavenArtifact(mavenDependency);
-                        // Just for the time being use contains but it would be better to have the folders with exactly the same artifactId to improve this filter
-                        // TODO: the folder name of the module should be the same as artifactId in order to improve this check!
-                        return artifact.getArtifactId().contains(fileParent) && artifact.getScope().equals(MAVEN_COMPILE_SCOPE);
-                    }).findFirst();
-                    if(dependency.isPresent())
+                    Optional<MavenArtifact> dependency = mavenDependencies.stream().filter(artifact ->
+                                                                                    {
+                                                                                        // Just for the time being use contains but it would be better to have the folders with exactly the same artifactId to improve this filter
+                                                                                        // TODO: the folder name of the module should be the same as artifactId in order to improve this check!
+                                                                                        return artifact.getArtifactId().contains(fileParent) && artifact.getScope().equals(MAVEN_COMPILE_SCOPE);
+                                                                                    }).findFirst();
+                    if (dependency.isPresent())
                     {
                         pluginURLs.add(url);
                     }
@@ -183,13 +180,7 @@ public class ArtifactClassloaderTestRunner extends Runner
             }
 
             // Tests classes should be app classloader
-            for (URL url : urls)
-            {
-                if(url.getFile().trim().endsWith(currentArtifactFolderName + TARGET_TEST_CLASSES))
-                {
-                    applicationURLs.add(url);
-                }
-            }
+            applicationURLs.addAll(urls.stream().filter(url -> url.getFile().trim().endsWith(currentArtifactFolderName + TARGET_TEST_CLASSES)).collect(Collectors.toList()));
 
             // The container contains anything that is not application either extension classloader urls
             List<URL> containerURLs = new ArrayList<>();
@@ -219,18 +210,19 @@ public class ArtifactClassloaderTestRunner extends Runner
         return classloader;
     }
 
-    private boolean isArtifactOf(String line, String scope)
+    private List<MavenArtifact> toMavenArtifacts(URL mavenDependenciesFile) throws IOException
     {
-        return line.endsWith(scope);
+        return Files.readAllLines(new File(mavenDependenciesFile.getFile()).toPath(),
+                                  Charset.defaultCharset()).stream()
+                .filter(line -> line.length() - line.replace(MAVEN_DEPENDENCIES_DELIMITER, "").length() >= 4).map(artifactLine -> parseMavenArtifact(artifactLine)).collect(Collectors.toList());
     }
 
-    private void addURL(List<URL> listBuilder, String mavenDependencyString, List<URL> urls)
+    private void addURL(List<URL> listBuilder, MavenArtifact artifact, List<URL> urls)
     {
-        MavenArtifact mavenArtifact = parseMavenArtifact(mavenDependencyString);
-        Optional<URL> artifact = urls.stream().filter(filePath -> filePath.getFile().contains(mavenArtifact.getGroupIdAsPath() + File.separator + mavenArtifact.getArtifactId())).findFirst();
-        if (artifact.isPresent())
+        Optional<URL> artifactURL = urls.stream().filter(filePath -> filePath.getFile().contains(artifact.getGroupIdAsPath() + File.separator + artifact.getArtifactId())).findFirst();
+        if (artifactURL.isPresent())
         {
-            listBuilder.add(artifact.get());
+            listBuilder.add(artifactURL.get());
         }
     }
 
@@ -325,6 +317,11 @@ public class ArtifactClassloaderTestRunner extends Runner
         public String getScope()
         {
             return scope;
+        }
+
+        public boolean isCompileScope()
+        {
+            return MAVEN_COMPILE_SCOPE.equals(scope);
         }
 
         @Override
