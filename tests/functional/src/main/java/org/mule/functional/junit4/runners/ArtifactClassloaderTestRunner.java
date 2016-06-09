@@ -24,7 +24,6 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -199,19 +198,22 @@ public class ArtifactClassloaderTestRunner extends Runner
             containerURLs.removeAll(applicationURLs);
 
             // Container classloader
-            URL[] arrayOfContainerURLs = containerURLs.toArray(new URL[containerURLs.size()]);
-            logger.debug("CONTAINER classloader: {}", Arrays.toString(arrayOfContainerURLs));
-            ArtifactClassLoader containerClassLoader = new TestContainerClassLoaderFactory(getExtraBootPackages(klass)).createContainerClassLoader(new URLClassLoader(arrayOfContainerURLs, getClass().getClassLoader()));
+            logger.debug("CONTAINER classloader: [");
+            containerURLs.forEach(e -> logger.debug(e.getFile()));
+            logger.debug("]");
+            ArtifactClassLoader containerClassLoader = new TestContainerClassLoaderFactory(getExtraBootPackages(klass)).createContainerClassLoader(new URLClassLoader(containerURLs.toArray(new URL[containerURLs.size()]), getClass().getClassLoader()));
 
             // Extension/Plugin classlaoder
-            URL[] arrayOfPluginURLS = pluginURLs.toArray(new URL[pluginURLs.size()]);
-            logger.debug("PLUGIN classloader: {}", Arrays.toString(arrayOfPluginURLS));
-            MuleArtifactClassLoader pluginClassLoader = new MuleArtifactClassLoader("plugin", arrayOfPluginURLS, containerClassLoader.getClassLoader(), containerClassLoader.getClassLoaderLookupPolicy());
+            logger.debug("PLUGIN classloader: [");
+            pluginURLs.forEach(e -> logger.debug(e.getFile()));
+            logger.debug("]");
+            MuleArtifactClassLoader pluginClassLoader = new MuleArtifactClassLoader("plugin", pluginURLs.toArray(new URL[pluginURLs.size()]), containerClassLoader.getClassLoader(), containerClassLoader.getClassLoaderLookupPolicy());
 
             // Application classloader
-            URL[] arrayOfApplicationURLS = applicationURLs.toArray(new URL[applicationURLs.size()]);
-            logger.debug("APPLICATION classloader: {}", Arrays.toString(arrayOfApplicationURLS));
-            classloader = new MuleArtifactClassLoader("application", arrayOfApplicationURLS, pluginClassLoader.getClassLoader(), pluginClassLoader.getClassLoaderLookupPolicy()).getClassLoader();
+            logger.debug("APPLICATION classloader: [");
+            applicationURLs.forEach(e -> logger.debug(e.getFile()));
+            logger.debug("]");
+            classloader = new MuleArtifactClassLoader("application", applicationURLs.toArray(new URL[applicationURLs.size()]), pluginClassLoader.getClassLoader(), pluginClassLoader.getClassLoaderLookupPolicy()).getClassLoader();
         }
 
         return classloader;
