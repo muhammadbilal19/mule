@@ -8,14 +8,11 @@ package org.mule.extension.file;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import org.mule.functional.junit4.FlowRunner;
-import org.mule.functional.junit4.runners.ArtifactClassloaderTestRunner;
 
 import java.io.File;
 
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
-@RunWith(ArtifactClassloaderTestRunner.class)
 public class FileCreateDirectoryTestCase extends FileConnectorTestCase
 {
 
