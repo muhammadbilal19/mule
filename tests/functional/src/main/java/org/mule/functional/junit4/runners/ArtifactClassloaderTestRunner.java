@@ -224,6 +224,9 @@ public class ArtifactClassloaderTestRunner extends Runner
         moduleMapping.put("mule-module-container", "modules/container/target/classes/");
         moduleMapping.put("mule-tests-functional", "tests/functional/target/classes/");
         moduleMapping.put("mule-tests-unit", "tests/unit/target/classes/");
+        moduleMapping.put("mule-module-launcher", "modules/launcher/target/classes/");
+        moduleMapping.put("mule-module-reboot", "modules/reboot/target/classes/");
+        moduleMapping.put("mule-tests-infrastructure", "tests/infrastructure/target/classes/");
     }
 
     private void addURL(List<URL> listBuilder, MavenArtifact artifact, List<URL> urls)
