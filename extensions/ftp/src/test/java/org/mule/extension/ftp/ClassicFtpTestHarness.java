@@ -24,6 +24,7 @@ import java.time.ZoneId;
 import java.util.Calendar;
 
 import org.apache.commons.net.ftp.FTPFile;
+import org.hamcrest.Matcher;
 import org.junit.rules.TestRule;
 
 /**
@@ -185,7 +186,10 @@ public class ClassicFtpTestHarness extends AbstractFtpTestHarness
     {
         FTPFile file = ftpClient.get(path);
 
-        assertThat(fileAttributes.getName(), equalTo(file.getName()));
+        final String name = fileAttributes.getName();
+        final String name1 = file.getName();
+        final Matcher<String> matcher = equalTo(name1);
+        assertThat(name, matcher);
         assertThat(fileAttributes.getPath(), equalTo(Paths.get("/", BASE_DIR, HELLO_PATH).toString()));
         assertThat(fileAttributes.getSize(), is(file.getSize()));
         assertTime(fileAttributes.getTimestamp(), file.getTimestamp());

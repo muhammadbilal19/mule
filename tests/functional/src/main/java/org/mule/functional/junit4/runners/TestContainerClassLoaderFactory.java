@@ -28,7 +28,7 @@ public class TestContainerClassLoaderFactory extends ContainerClassLoaderFactory
     }
 
     @Override
-    protected Set<String> getBootPackages()
+    public Set<String> getBootPackages()
     {
         return ImmutableSet.<String>builder().addAll(super.getBootPackages()).addAll(extraBootPackages).build();
     }

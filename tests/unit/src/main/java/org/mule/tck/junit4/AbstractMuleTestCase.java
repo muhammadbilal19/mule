@@ -17,7 +17,6 @@ import org.mule.tck.junit4.rule.WarningTimeout;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
@@ -48,27 +47,27 @@ public abstract class AbstractMuleTestCase
     /**
      * Indicates whether the text boxes will be logged when starting each test case.
      */
-    private static final boolean verbose;
-
-    static
-    {
-        String muleOpts = SystemUtils.getenv("MULE_TEST_OPTS");
-        if (StringUtils.isNotBlank(muleOpts))
-        {
-            Map<String, String> parsedOpts = SystemUtils.parsePropertyDefinitions(muleOpts);
-            String optVerbose = parsedOpts.get("mule.verbose");
-            verbose = Boolean.valueOf(optVerbose);
-        }
-        else
-        {
-            verbose = true;
-        }
-
-        System.setProperty(TESTING_MODE_PROPERTY_NAME, StringUtils.EMPTY);
-
-        // register the custom UrlStreamHandlerFactory.
-        MuleUrlStreamHandlerFactory.installUrlStreamHandlerFactory();
-    }
+    private static final boolean verbose= false;
+    //
+    //static
+    //{
+    //    String muleOpts = SystemUtils.getenv("MULE_TEST_OPTS");
+    //    if (StringUtils.isNotBlank(muleOpts))
+    //    {
+    //        Map<String, String> parsedOpts = SystemUtils.parsePropertyDefinitions(muleOpts);
+    //        String optVerbose = parsedOpts.get("mule.verbose");
+    //        verbose = Boolean.valueOf(optVerbose);
+    //    }
+    //    else
+    //    {
+    //        verbose = true;
+    //    }
+    //
+    //    System.setProperty(TESTING_MODE_PROPERTY_NAME, StringUtils.EMPTY);
+    //
+    //    // register the custom UrlStreamHandlerFactory.
+    //    MuleUrlStreamHandlerFactory.installUrlStreamHandlerFactory();
+    //}
 
     protected final transient Logger logger = LoggerFactory.getLogger(this.getClass());
 

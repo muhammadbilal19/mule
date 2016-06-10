@@ -6,6 +6,7 @@
  */
 package org.mule.functional.junit4.runners;
 
+import org.mule.runtime.core.util.SerializationUtils;
 import org.mule.runtime.module.artifact.classloader.ArtifactClassLoader;
 import org.mule.runtime.module.artifact.classloader.MuleArtifactClassLoader;
 
@@ -13,6 +14,7 @@ import com.google.common.collect.Sets;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -24,8 +26,10 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -140,10 +144,14 @@ public class ArtifactClassloaderTestRunner extends Runner
             logger.debug("Building classloader hierarchy using maven dependency list file: '{}', created: {}, last modified: {}", mavenDependenciesFile, view.creationTime(), view.lastModifiedTime());
             // get the urls from the java.class.path system property (works for maven or when running tests from IDEs)
             final List<URL> urls = new LinkedList<>();
+            StringBuilder builder = new StringBuilder("ClassPath:");
             for (String file : System.getProperty("java.class.path").split(":"))
             {
-                urls.add(new File(file).toURI().toURL());
+                final URL url = new File(file).toURI().toURL();
+                urls.add(url);
+                builder.append("\n").append(url);
             }
+            System.out.println(builder.toString());
 
             // maven-dependency-plugin adds a few extra lines to the top
             List<MavenArtifact> mavenDependencies = toMavenArtifacts(mavenDependenciesFile);
@@ -156,7 +164,7 @@ public class ArtifactClassloaderTestRunner extends Runner
             mavenDependencies.stream().filter(artifact -> artifact.isCompileScope()).forEach(artifact -> addURL(pluginURLs, artifact, urls));
 
             // plugin libraries should be all the dependencies with scope 'test'
-            mavenDependencies.stream().filter(artifact -> artifact.isTestScope() && !artifact.isJunit()).forEach(artifact -> addURL(applicationURLs, artifact, urls));
+            mavenDependencies.stream().filter(artifact -> artifact.isTestScope()).forEach(artifact -> addURL(applicationURLs, artifact, urls));
 
             // when multi-module is used classes folders should be added as plugin classloader libraries for this artifact
             String currentArtifactFolderName = new File(System.getProperty("user.dir")).getName();
@@ -166,6 +174,7 @@ public class ArtifactClassloaderTestRunner extends Runner
 
             // Tests classes should be app classloader
             applicationURLs.addAll(urls.stream().filter(url -> url.getFile().trim().endsWith(currentArtifactFolderName + TARGET_TEST_CLASSES)).collect(Collectors.toList()));
+
 
             // The container contains anything that is not application either extension classloader urls
             List<URL> containerURLs = new ArrayList<>();
@@ -177,7 +186,9 @@ public class ArtifactClassloaderTestRunner extends Runner
             logger.debug("CONTAINER classloader: [");
             containerURLs.forEach(e -> logger.debug(e.getFile()));
             logger.debug("]");
-            ArtifactClassLoader containerClassLoader = new TestContainerClassLoaderFactory(getExtraBootPackages(klass)).createContainerClassLoader(new URLClassLoader(containerURLs.toArray(new URL[containerURLs.size()]), getClass().getClassLoader()));
+            final TestContainerClassLoaderFactory testContainerClassLoaderFactory = new TestContainerClassLoaderFactory(getExtraBootPackages(klass));
+            ArtifactClassLoader containerClassLoader = testContainerClassLoaderFactory.createContainerClassLoader(new SystemContainerClassLoader(containerURLs.toArray(new URL[containerURLs.size()]), testContainerClassLoaderFactory.getBootPackages()));
+
 
             // Extension/Plugin classlaoder
             logger.debug("PLUGIN classloader: [");
@@ -206,12 +217,82 @@ public class ArtifactClassloaderTestRunner extends Runner
                 .filter(line -> line.length() - line.replace(MAVEN_DEPENDENCIES_DELIMITER, "").length() >= 4).map(artifactLine -> parseMavenArtifact(artifactLine)).collect(Collectors.toList());
     }
 
+    private static final Map<String, String>  moduleMapping = new HashMap();
+    static
+    {
+        moduleMapping.put("mule-module-container", "modules/container/target/classes/");
+        moduleMapping.put("mule-tests-functional", "tests/functional/target/classes/");
+        moduleMapping.put("mule-tests-unit", "tests/unit/target/classes/");
+    }
+
     private void addURL(List<URL> listBuilder, MavenArtifact artifact, List<URL> urls)
     {
-        Optional<URL> artifactURL = urls.stream().filter(filePath -> filePath.getFile().contains(artifact.getGroupIdAsPath() + File.separator + artifact.getArtifactId())).findFirst();
+        Optional<URL> artifactURL = urls.stream().filter(filePath -> filePath.getFile().contains(artifact.getGroupIdAsPath() + File.separator + artifact.getArtifactId() + File.separator)).findFirst();
         if (artifactURL.isPresent())
         {
             listBuilder.add(artifactURL.get());
+        }
+        else
+        {
+            if (artifact.isTestScope())
+            {
+                final String urlSuffix = moduleMapping.get(artifact.artifactId);
+                if (urlSuffix != null)
+                {
+                    final Optional<URL> localFile = urls.stream().filter(url -> url.toString().endsWith(urlSuffix)).findFirst();
+                    if (localFile.isPresent())
+                    {
+                        listBuilder.add(localFile.get());
+                        return;
+                    }
+                }
+
+                throw new IllegalArgumentException("Cannot locate artifact: " + artifact);
+
+            }
+        }
+    }
+
+    public static class SystemContainerClassLoader extends URLClassLoader
+    {
+
+        private final Set<String> bootPackages;
+
+        public SystemContainerClassLoader(URL[] urls, Set<String> bootPackages) {
+            super(urls, null);
+            this.bootPackages = bootPackages;
+        }
+
+        @Override
+        public Class<?> loadClass(String name) throws ClassNotFoundException {
+            Class<?> result = findLoadedClass(name);
+
+            if (result != null)
+            {
+                return result;
+            }
+
+            if (isBootPackage(name))
+            {
+                return getSystemClassLoader().loadClass(name);
+            }
+            else
+            {
+                return findClass(name);
+            }
+        }
+
+        private boolean isBootPackage(String name)
+        {
+            for (String bootPackage : bootPackages)
+            {
+                if (name.startsWith(bootPackage))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 
@@ -223,7 +304,9 @@ public class ArtifactClassloaderTestRunner extends Runner
         String type = tokenizer.nextToken().trim();
         String version = tokenizer.nextToken().trim();
         String scope = tokenizer.nextToken().trim();
-        return new MavenArtifact(groupId, artifactId, type, version, scope);
+        final MavenArtifact mavenArtifact = new MavenArtifact(groupId, artifactId, type, version, scope);
+        System.out.println(mavenArtifact);
+        return mavenArtifact;
     }
 
     @Override
@@ -231,7 +314,8 @@ public class ArtifactClassloaderTestRunner extends Runner
     {
         try
         {
-            return (Description) innerRunnerClass.getMethod("getDescription").invoke(innerRunner);
+            final byte[] serialized = SerializationUtils.serialize((Serializable) innerRunnerClass.getMethod("getDescription").invoke(innerRunner));
+            return (Description) SerializationUtils.deserialize(serialized);
         }
         catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
                 | SecurityException e)
@@ -316,6 +400,12 @@ public class ArtifactClassloaderTestRunner extends Runner
         public boolean isTestScope()
         {
             return MAVEN_TEST_SCOPE.equals(scope);
+        }
+
+        @Override
+        public String toString()
+        {
+            return "MavenArtifact[groupId" + groupId + " artifactId: " + artifactId + " version:" + version + " type: " + type + " scope: " + scope +"]";
         }
 
         @Override

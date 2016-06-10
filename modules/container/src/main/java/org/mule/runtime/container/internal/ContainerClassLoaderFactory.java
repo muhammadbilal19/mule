@@ -83,9 +83,8 @@ public class ContainerClassLoaderFactory
             "com.sun", "sun",
             "org.springframework",
             "org.mule.mvel2",
-
-            "org.junit",
-            "org.hamcrest"
+            "org.apache.commons.lang",
+            "org.apache.commons.io"
     );
 
     private ModuleDiscoverer moduleDiscoverer = new ClasspathModuleDiscoverer(this.getClass().getClassLoader());
