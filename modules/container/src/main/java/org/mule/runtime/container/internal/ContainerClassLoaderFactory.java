@@ -52,6 +52,7 @@ public class ContainerClassLoaderFactory
             "javax.activation",
             "javax.activity",
             "javax.annotation",
+            "javax.crypto",
             "javax.imageio",
             "javax.jws",
             "javax.lang.model",
