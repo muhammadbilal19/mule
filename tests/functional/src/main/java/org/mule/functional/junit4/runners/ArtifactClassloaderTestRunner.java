@@ -181,6 +181,7 @@ public class ArtifactClassloaderTestRunner extends Runner
             containerURLs.addAll(urls);
             containerURLs.removeAll(pluginURLs);
             containerURLs.removeAll(applicationURLs);
+            containerURLs.add(new URL("file:/Users/pablokraan/.m2/repository/com/google/guava/guava/18.0/guava-18.0.jar"));
 
             // Container classloader
             logger.debug("CONTAINER classloader: [");

@@ -84,7 +84,8 @@ public class ContainerClassLoaderFactory
             "org.springframework",
             "org.mule.mvel2",
             "org.apache.commons.lang",
-            "org.apache.commons.io"
+            "org.apache.commons.io",
+            "org.apache.commons.collections"
     );
 
     private ModuleDiscoverer moduleDiscoverer = new ClasspathModuleDiscoverer(this.getClass().getClassLoader());
