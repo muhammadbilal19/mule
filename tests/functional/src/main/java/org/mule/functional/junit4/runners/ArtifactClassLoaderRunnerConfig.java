@@ -29,7 +29,7 @@ public @interface ArtifactClassLoaderRunnerConfig
 
     /**
      * @return a comma separated list of packages to be added as PARENT_ONLY for the
-     * container classloader, default packages are "org.junit,junit,org.hamcrest".
+     * container classloader, default packages are "org.junit,junit,org.hamcrest,org.mockito".
      */
-    String extraBootPackages() default "org.junit,junit,org.hamcrest";
+    String extraBootPackages() default "org.junit,junit,org.hamcrest,org.mockito";
 }

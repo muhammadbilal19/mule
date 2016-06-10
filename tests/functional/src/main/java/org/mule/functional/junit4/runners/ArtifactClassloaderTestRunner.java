@@ -117,7 +117,7 @@ public class ArtifactClassloaderTestRunner extends Runner
 
     public Set<String> getExtraBootPackages(Class<?> testClass)
     {
-        String extraPackages = "org.junit,junit,org.hamcrest";
+        String extraPackages = "org.junit,junit,org.hamcrest,org.mockito";
         ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
 
         if(annotation != null)
