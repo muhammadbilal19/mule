@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -142,16 +143,7 @@ public class ArtifactClassloaderTestRunner extends Runner
             Path dependenciesPath = Paths.get(mavenDependenciesFile.toURI());
             BasicFileAttributes view = Files.getFileAttributeView(dependenciesPath, BasicFileAttributeView.class).readAttributes();
             logger.debug("Building classloader hierarchy using maven dependency list file: '{}', created: {}, last modified: {}", mavenDependenciesFile, view.creationTime(), view.lastModifiedTime());
-            // get the urls from the java.class.path system property (works for maven or when running tests from IDEs)
-            final List<URL> urls = new LinkedList<>();
-            StringBuilder builder = new StringBuilder("ClassPath:");
-            for (String file : System.getProperty("java.class.path").split(":"))
-            {
-                final URL url = new File(file).toURI().toURL();
-                urls.add(url);
-                builder.append("\n").append(url);
-            }
-            System.out.println(builder.toString());
+            final List<URL> urls = getFullClassPathUrls();
 
             // maven-dependency-plugin adds a few extra lines to the top
             List<MavenArtifact> mavenDependencies = toMavenArtifacts(mavenDependenciesFile);
@@ -209,6 +201,29 @@ public class ArtifactClassloaderTestRunner extends Runner
         }
 
         return classloader;
+    }
+
+    /**
+     * Gets the urls from the {@code java.class.path} and {@code sun.boot.class.path} system properties
+     */
+    private List<URL> getFullClassPathUrls() throws MalformedURLException
+    {
+        final List<URL> urls = new LinkedList<>();
+        StringBuilder builder = new StringBuilder("ClassPath:");
+        for (String file : System.getProperty("java.class.path").split(":"))
+        {
+            final URL url = new File(file).toURI().toURL();
+            urls.add(url);
+            builder.append("\n").append(url);
+        }
+        for (String file : System.getProperty("sun.boot.class.path").split(":"))
+        {
+            final URL url = new File(file).toURI().toURL();
+            urls.add(url);
+            builder.append("\n").append(url);
+        }
+        System.out.println(builder.toString());
+        return urls;
     }
 
     private List<MavenArtifact> toMavenArtifacts(URL mavenDependenciesFile) throws IOException
