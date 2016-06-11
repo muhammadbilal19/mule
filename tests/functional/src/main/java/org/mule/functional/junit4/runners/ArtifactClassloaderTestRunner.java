@@ -61,7 +61,6 @@ public class ArtifactClassloaderTestRunner extends Runner
     private static final String MAVEN_TEST_SCOPE = "test";
     private static final String TARGET_TEST_CLASSES = "/target/test-classes/";
     private static final String TARGET_CLASSES = "/target/classes/";
-
     private static final String DEPENDENCIES_LIST_FILE = "dependencies.list";
 
     private final Object innerRunner;
@@ -213,21 +212,25 @@ public class ArtifactClassloaderTestRunner extends Runner
     private List<URL> getFullClassPathUrls() throws MalformedURLException
     {
         final List<URL> urls = new LinkedList<>();
-        StringBuilder builder = new StringBuilder("ClassPath:");
-        for (String file : System.getProperty("java.class.path").split(":"))
+        addUrlsFromSystemProperty(urls, "java.class.path");
+        addUrlsFromSystemProperty(urls, "sun.boot.class.path");
+
+        if (logger.isDebugEnabled())
         {
-            final URL url = new File(file).toURI().toURL();
-            urls.add(url);
-            builder.append("\n").append(url);
+            StringBuilder builder = new StringBuilder("ClassPath:");
+            logger.debug(builder.toString());
+            urls.stream().forEach(url -> builder.append("\n").append(url));
         }
-        for (String file : System.getProperty("sun.boot.class.path").split(":"))
-        {
-            final URL url = new File(file).toURI().toURL();
-            urls.add(url);
-            builder.append("\n").append(url);
-        }
-        System.out.println(builder.toString());
+
         return urls;
+    }
+
+    private void addUrlsFromSystemProperty(List<URL> urls, String propertyName) throws MalformedURLException
+    {
+        for (String file : System.getProperty(propertyName).split(":"))
+        {
+            urls.add(new File(file).toURI().toURL());
+        }
     }
 
     private List<MavenArtifact> toMavenArtifacts(URL mavenDependenciesFile) throws IOException
