@@ -26,11 +26,6 @@ public class FileCopyTestCase extends FileConnectorTestCase
 
     protected String sourcePath;
 
-    public FileCopyTestCase()
-    {
-        System.out.println("zaraza");
-    }
-
     @Override
     protected String getConfigFile()
     {
