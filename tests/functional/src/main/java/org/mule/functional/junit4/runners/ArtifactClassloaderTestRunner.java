@@ -175,24 +175,17 @@ public class ArtifactClassloaderTestRunner extends Runner
             containerURLs.removeAll(applicationURLs);
             containerURLs.add(new URL("file:/Users/pablokraan/.m2/repository/com/google/guava/guava/18.0/guava-18.0.jar"));
 
-            // Container classloader
-            logger.debug("CONTAINER classloader: [");
-            containerURLs.forEach(e -> logger.debug(e.getFile()));
-            logger.debug("]");
+            // Container classLoader
+            logClassLoaderUrls("CONTAINER", containerURLs);
             final TestContainerClassLoaderFactory testContainerClassLoaderFactory = new TestContainerClassLoaderFactory(getExtraBootPackages(klass));
             ArtifactClassLoader containerClassLoader = testContainerClassLoaderFactory.createContainerClassLoader(new SystemContainerClassLoader(containerURLs.toArray(new URL[containerURLs.size()]), testContainerClassLoaderFactory.getBootPackages()));
 
-
-            // Extension/Plugin classlaoder
-            logger.debug("PLUGIN classloader: [");
-            pluginURLs.forEach(e -> logger.debug(e.getFile()));
-            logger.debug("]");
+            // Extension/Plugin classLoader
+            logClassLoaderUrls("PLUGIN", pluginURLs);
             MuleArtifactClassLoader pluginClassLoader = new MuleArtifactClassLoader("plugin", pluginURLs.toArray(new URL[pluginURLs.size()]), containerClassLoader.getClassLoader(), containerClassLoader.getClassLoaderLookupPolicy());
 
-            // Application classloader
-            logger.debug("APPLICATION classloader: [");
-            applicationURLs.forEach(e -> logger.debug(e.getFile()));
-            logger.debug("]");
+            // Application classLoader
+            logClassLoaderUrls("APPLICATION", applicationURLs);
             classloader = new MuleArtifactClassLoader("application", applicationURLs.toArray(new URL[applicationURLs.size()]), pluginClassLoader.getClassLoader(), pluginClassLoader.getClassLoaderLookupPolicy()).getClassLoader();
         }
         else
@@ -201,6 +194,17 @@ public class ArtifactClassloaderTestRunner extends Runner
         }
 
         return classloader;
+    }
+
+    private void logClassLoaderUrls(String classLoaderName, List<URL> containerURLs)
+    {
+        if (logger.isDebugEnabled())
+        {
+            StringBuilder builder = new StringBuilder(classLoaderName).append(" classloader: [");
+            containerURLs.forEach(e -> builder.append("\n").append(e.getFile()));
+            builder.append("\n]");
+            logger.debug(builder.toString());
+        }
     }
 
     /**
