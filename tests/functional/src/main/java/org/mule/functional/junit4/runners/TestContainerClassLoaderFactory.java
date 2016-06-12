@@ -7,7 +7,7 @@
 
 package org.mule.functional.junit4.runners;
 
-import org.mule.runtime.container.ContainerClassLoaderFactory;
+import org.mule.runtime.container.internal.ContainerClassLoaderFactory;
 
 import com.google.common.collect.ImmutableSet;
 
