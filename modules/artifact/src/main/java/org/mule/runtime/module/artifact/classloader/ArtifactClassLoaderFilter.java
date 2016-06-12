@@ -70,10 +70,11 @@ public class ArtifactClassLoaderFilter implements ClassLoaderFilter
     public boolean exportsResource(String name)
     {
         //checkArgument(!StringUtils.isEmpty(name), "Resource name cannot be empty");
-        if(StringUtils.isEmpty(name))
-        {
-            return true;
-        }
+        checkArgument(name != null, "Resource name cannot be null");
+        //if(StringUtils.isEmpty(name))
+        //{
+        //    return true;
+        //}
         final String resourcePackage = getResourceFolder(name);
 
         return exportedResourcePackages.contains(resourcePackage);
@@ -89,8 +90,12 @@ public class ArtifactClassLoaderFilter implements ClassLoaderFilter
 
     private String getResourceFolder(String resourceName)
     {
-        String pkgName = (resourceName.charAt(0) == RESOURCE_SEPARATOR) ? resourceName.substring(1) : resourceName;
-        pkgName = (pkgName.lastIndexOf(RESOURCE_SEPARATOR) < 0) ? EMPTY_PACKAGE : pkgName.substring(0, pkgName.lastIndexOf(RESOURCE_SEPARATOR));
+        String pkgName = "";
+        if (resourceName.length() > 0)
+        {
+            pkgName = (resourceName.charAt(0) == RESOURCE_SEPARATOR) ? resourceName.substring(1) : resourceName;
+            pkgName = (pkgName.lastIndexOf(RESOURCE_SEPARATOR) < 0) ? EMPTY_PACKAGE : pkgName.substring(0, pkgName.lastIndexOf(RESOURCE_SEPARATOR));
+        }
         return pkgName;
     }
 

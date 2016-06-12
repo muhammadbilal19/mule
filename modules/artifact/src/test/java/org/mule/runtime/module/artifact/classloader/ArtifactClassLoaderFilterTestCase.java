@@ -80,6 +80,6 @@ public class ArtifactClassLoaderFilterTestCase extends AbstractMuleTestCase
     @Test(expected = IllegalArgumentException.class)
     public void validatesEmptyResourceName() throws Exception
     {
-        filter.exportsResource("");
+        filter.exportsResource(null);
     }
 }
