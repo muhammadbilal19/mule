@@ -216,8 +216,8 @@ public class ArtifactClassloaderTestRunner extends Runner
         if (logger.isDebugEnabled())
         {
             StringBuilder builder = new StringBuilder("ClassPath:");
-            logger.debug(builder.toString());
             urls.stream().forEach(url -> builder.append("\n").append(url));
+            logger.debug(builder.toString());
         }
 
         return urls;
