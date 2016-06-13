@@ -135,20 +135,19 @@ public class ArtifactClassloaderTestRunner extends Runner
 
     private ClassLoader buildArtifactClassloader(Class<?> klass) throws IOException, URISyntaxException
     {
-        ClassLoader classloader = ArtifactClassloaderTestRunner.class.getClassLoader();
-        URL mavenDependenciesFile = classloader.getResource(getDependenciesListFileName(klass));
-        if (mavenDependenciesFile == null)
+        final File dependenciesFile = new File(System.getProperty("user.dir"), "target/test-classes/dependencies.list");
+        if (!dependenciesFile.exists())
         {
-            throw new RuntimeException(String.format("Unable to run test a '{}' was not found. Run 'mvn process-resources' to ensure the file is built", DEPENDENCIES_LIST_FILE));
+            throw new RuntimeException(String.format("Unable to run test a '%s' was not found. Run 'mvn process-resources' to ensure the file is built", DEPENDENCIES_LIST_FILE));
         }
 
-        Path dependenciesPath = Paths.get(mavenDependenciesFile.toURI());
+        Path dependenciesPath = Paths.get(dependenciesFile.toURI());
         BasicFileAttributes view = Files.getFileAttributeView(dependenciesPath, BasicFileAttributeView.class).readAttributes();
-        logger.debug("Building classloader hierarchy using maven dependency list file: '{}', created: {}, last modified: {}", mavenDependenciesFile, view.creationTime(), view.lastModifiedTime());
+        logger.debug("Building classloader hierarchy using maven dependency list file: '{}', created: {}, last modified: {}", dependenciesFile, view.creationTime(), view.lastModifiedTime());
         final List<URL> urls = getFullClassPathUrls();
 
         // maven-dependency-plugin adds a few extra lines to the top
-        List<MavenArtifact> mavenDependencies = toMavenArtifacts(mavenDependenciesFile);
+        List<MavenArtifact> mavenDependencies = toMavenArtifacts(dependenciesFile.toURL());
 
         // Lists of artifacts to be used by different classloaders
         List<URL> pluginURLs = new ArrayList<>();
@@ -175,7 +174,9 @@ public class ArtifactClassloaderTestRunner extends Runner
         containerURLs.addAll(urls);
         containerURLs.removeAll(pluginURLs);
         containerURLs.removeAll(applicationURLs);
-        containerURLs.add(new URL("file:/Users/pablokraan/.m2/repository/com/google/guava/guava/18.0/guava-18.0.jar"));
+        final String localRepository = System.getProperty("localRepository", "/Users/pablokraan/.m2/repository");
+        logger.debug("Using maven local repository: " + localRepository);
+        containerURLs.add(new URL("file:" + localRepository +"/com/google/guava/guava/18.0/guava-18.0.jar"));
 
         // Container classLoader
         logClassLoaderUrls("CONTAINER", containerURLs);
@@ -188,10 +189,7 @@ public class ArtifactClassloaderTestRunner extends Runner
 
         // Application classLoader
         logClassLoaderUrls("APPLICATION", applicationURLs);
-        classloader = new MuleArtifactClassLoader("application", applicationURLs.toArray(new URL[applicationURLs.size()]), pluginClassLoader.getClassLoader(), pluginClassLoader.getClassLoaderLookupPolicy()).getClassLoader();
-
-
-        return classloader;
+        return new MuleArtifactClassLoader("application", applicationURLs.toArray(new URL[applicationURLs.size()]), pluginClassLoader.getClassLoader(), pluginClassLoader.getClassLoaderLookupPolicy()).getClassLoader();
     }
 
     private void logClassLoaderUrls(String classLoaderName, List<URL> containerURLs)
