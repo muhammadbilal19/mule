@@ -8,6 +8,7 @@ package org.mule.functional.junit4.runners;
 
 import org.mule.runtime.core.util.SerializationUtils;
 import org.mule.runtime.module.artifact.classloader.ArtifactClassLoader;
+import org.mule.runtime.module.artifact.classloader.DisposableClassLoader;
 import org.mule.runtime.module.artifact.classloader.MuleArtifactClassLoader;
 
 import com.google.common.collect.Sets;
@@ -368,6 +369,18 @@ public class ArtifactClassloaderTestRunner extends Runner
         finally
         {
             Thread.currentThread().setContextClassLoader(original);
+
+            if (artifactClassLoader instanceof DisposableClassLoader)
+            {
+                try
+                {
+                    ((DisposableClassLoader) artifactClassLoader).dispose();
+                }
+                catch (Exception e)
+                {
+                    // Ignore
+                }
+            }
             artifactClassLoader = null;
         }
     }
