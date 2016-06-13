@@ -63,8 +63,9 @@ public class ArtifactClassloaderTestRunner extends Runner
     private static final String MAVEN_PROVIDED_SCOPE = "provided";
     private static final String TARGET_TEST_CLASSES = "/target/test-classes/";
     private static final String TARGET_CLASSES = "/target/classes/";
-    private static final String DEPENDENCIES_LIST_FILE = "dependencies.list";
-    private static final String DEPENDENCIES_GRAPH_FILE = "dependency-graph.dot";
+
+    private static final String DEPENDENCIES_LIST_FILE = TARGET_TEST_CLASSES + "dependencies.list";
+    private static final String DEPENDENCIES_GRAPH_FILE = TARGET_TEST_CLASSES + "dependency-graph.dot";
 
     private final Object innerRunner;
     private final Class<?> innerRunnerClass;
@@ -117,7 +118,20 @@ public class ArtifactClassloaderTestRunner extends Runner
 
         if (annotation != null)
         {
-            dependenciesListFileName = annotation.dependenciesListFileName();
+            dependenciesListFileName = annotation.dependenciesListFile();
+        }
+
+        return dependenciesListFileName;
+    }
+
+    public String getDependenciesGraphFileName(Class<?> testClass)
+    {
+        String dependenciesListFileName = DEPENDENCIES_GRAPH_FILE;
+        ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
+
+        if (annotation != null)
+        {
+            dependenciesListFileName = annotation.dependenciesGraphFile();
         }
 
         return dependenciesListFileName;
@@ -138,19 +152,24 @@ public class ArtifactClassloaderTestRunner extends Runner
 
     private ClassLoader buildArtifactClassloader(Class<?> klass) throws IOException, URISyntaxException
     {
-        final File dependenciesFile = new File(System.getProperty("user.dir"), "target/test-classes/dependencies.list");
-        final File dependenciesGraphFile = new File(System.getProperty("user.dir"), "/target/" + DEPENDENCIES_GRAPH_FILE);
+        final String userDir = System.getProperty("user.dir");
+        final File dependenciesFile = new File(userDir, getDependenciesListFileName(klass));
+        final File dependenciesGraphFile = new File(userDir, getDependenciesGraphFileName(klass));
 
-        if (!dependenciesFile.exists() || !dependenciesGraphFile.exists())
+        if (!dependenciesFile.exists())
         {
-            throw new RuntimeException(String.format("Unable to run test a '%s' or '%s' was not found. Run 'mvn process-resources' to ensure these files  built", DEPENDENCIES_LIST_FILE, DEPENDENCIES_GRAPH_FILE));
+            throw new RuntimeException(String.format("Unable to run test a '%s' was not found. Run 'mvn process-resources' to ensure this file is created before running the test", DEPENDENCIES_LIST_FILE));
         }
+        if (!dependenciesGraphFile.exists())
+        {
+            throw new RuntimeException(String.format("Unable to run test a '%s' was not found. Run 'mvn process-resources' to ensure this file is created before running the test", DEPENDENCIES_GRAPH_FILE));
+        }
+
+        final Set<URL> urls = getFullClassPathUrls();
 
         Path dependenciesPath = Paths.get(dependenciesFile.toURI());
         BasicFileAttributes view = Files.getFileAttributeView(dependenciesPath, BasicFileAttributeView.class).readAttributes();
         logger.debug("Building classloader hierarchy using maven dependency list file: '{}', created: {}, last modified: {}", dependenciesFile, view.creationTime(), view.lastModifiedTime());
-        final Set<URL> urls = getFullClassPathUrls();
-
         // maven-dependency-plugin adds a few extra lines to the top
         List<MavenArtifact> mavenDependencies = toMavenArtifacts(dependenciesFile);
 
@@ -278,36 +297,42 @@ public class ArtifactClassloaderTestRunner extends Runner
 
     private void addURL(final Collection<URL> collection, final MavenArtifact artifact, final Collection<URL> urls)
     {
+        // Resolves the artifact from maven repository
         Optional<URL> artifactURL = urls.stream().filter(filePath -> filePath.getFile().contains(artifact.getGroupIdAsPath() + File.separator + artifact.getArtifactId() + File.separator)).findFirst();
         if (artifactURL.isPresent())
         {
             collection.add(artifactURL.get());
+            // It would also include its dependencies
             artifact.getDependencies().forEach(dependency -> addURL(collection, dependency, urls));
         }
         else
         {
-            if (artifact.isTestScope())
+            addModuleURL(collection, artifact, urls);
+        }
+    }
+
+    private void addModuleURL(Collection<URL> collection, MavenArtifact artifact, Collection<URL> urls)
+    {
+        // If it is a test dependency and it is not resolved from maven repository we are in the case of a
+        // multi-module maven dependency and we don't need to add its transitive dependencies
+        if (artifact.isTestScope())
+        {
+            final String urlSuffix = moduleMapping.get(artifact.artifactId);
+            if (urlSuffix != null)
             {
-                final String urlSuffix = moduleMapping.get(artifact.artifactId);
-                if (urlSuffix != null)
+                final Optional<URL> localFile = urls.stream().filter(url -> url.toString().endsWith(urlSuffix)).findFirst();
+                if (localFile.isPresent())
                 {
-                    final Optional<URL> localFile = urls.stream().filter(url -> url.toString().endsWith(urlSuffix)).findFirst();
-                    if (localFile.isPresent())
-                    {
-                        collection.add(localFile.get());
-                        return;
-                    }
+                    collection.add(localFile.get());
+                    return;
                 }
-
-                throw new IllegalArgumentException("Cannot locate artifact: " + artifact);
-
             }
+            throw new IllegalArgumentException("Cannot locate artifact as multi-module dependency: '" + artifact + "', mapping used is: " + moduleMapping);
         }
     }
 
     public static class SystemContainerClassLoader extends URLClassLoader
     {
-
         private final Set<String> bootPackages;
 
         public SystemContainerClassLoader(URL[] urls, Set<String> bootPackages)

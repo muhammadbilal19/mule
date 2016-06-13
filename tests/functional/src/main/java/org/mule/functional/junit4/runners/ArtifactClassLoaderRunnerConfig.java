@@ -25,7 +25,12 @@ public @interface ArtifactClassLoaderRunnerConfig
     /**
      * @return the file name for getting the maven dependencies listed with maven-dependency-plugin
      */
-    String dependenciesListFileName() default "dependencies.list";
+    String dependenciesListFile() default "target/test-classes/dependencies.list";
+
+    /**
+     * @return the file name for getting the maven dependencies graph with depgraph-maven-plugin
+     */
+    String dependenciesGraphFile() default "target/test-classes/dependency-graph.dot";
 
     /**
      * @return a comma separated list of packages to be added as PARENT_ONLY for the
