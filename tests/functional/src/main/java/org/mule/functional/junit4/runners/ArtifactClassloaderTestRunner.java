@@ -173,15 +173,19 @@ public class ArtifactClassloaderTestRunner extends Runner
         // maven-dependency-plugin adds a few extra lines to the top
         List<MavenArtifact> mavenDependencies = toMavenArtifacts(dependenciesFile);
 
+        // Provided dependencies (with dependencies) are obtained first in order to avoid including them in application classloader if needed
+        Set<URL> containerDependenciesProvided = new HashSet<>();
+        mavenDependencies.stream().filter(artifact -> artifact.isProvidedScope()).forEach(artifact -> {fillDependencies(artifact, dependenciesGraphFile); addURL(containerDependenciesProvided, artifact, urls, Collections.EMPTY_LIST);});
+
         // Lists of urls to be used by different classloaders
         Set<URL> pluginURLs = new HashSet<>();
         Set<URL> applicationURLs = new HashSet<>();
         
         // plugin libraries should be all the dependencies with scope 'compile'
-        mavenDependencies.stream().filter(artifact -> artifact.isCompileScope()).forEach(artifact -> {fillDependencies(artifact, dependenciesGraphFile); addURL(pluginURLs, artifact, urls);});
+        mavenDependencies.stream().filter(artifact -> artifact.isCompileScope()).forEach(artifact -> {fillDependencies(artifact, dependenciesGraphFile); addURL(pluginURLs, artifact, urls, Collections.EMPTY_LIST);});
 
         // plugin libraries should be all the dependencies with scope 'test'
-        mavenDependencies.stream().filter(artifact -> artifact.isTestScope()).forEach(artifact -> {fillDependencies(artifact, dependenciesGraphFile); addURL(applicationURLs, artifact, urls);});
+        mavenDependencies.stream().filter(artifact -> artifact.isTestScope()).forEach(artifact -> {fillDependencies(artifact, dependenciesGraphFile); addURL(applicationURLs, artifact, urls, containerDependenciesProvided);});
 
         // when multi-module is used classes folders should be added as plugin classloader libraries for this artifact
         String currentArtifactFolderName = new File(System.getProperty("user.dir")).getName();
@@ -193,9 +197,6 @@ public class ArtifactClassloaderTestRunner extends Runner
         applicationURLs.addAll(urls.stream().filter(url -> url.getFile().trim().endsWith(currentArtifactFolderName + TARGET_TEST_CLASSES)).collect(Collectors.toList()));
 
         // The container contains anything that is not application either extension classloader urls
-        Set<URL> containerDependenciesProvided = new HashSet<>();
-        mavenDependencies.stream().filter(artifact -> artifact.isProvidedScope()).forEach(artifact -> {fillDependencies(artifact, dependenciesGraphFile); addURL(containerDependenciesProvided, artifact, urls);});
-
         Set<URL> containerURLs = new HashSet<>();
         containerURLs.addAll(urls);
         containerURLs.removeAll(pluginURLs);
@@ -286,48 +287,63 @@ public class ArtifactClassloaderTestRunner extends Runner
 
     static
     {
-        moduleMapping.put("mule-module-container", "modules/container/target/classes/");
-        moduleMapping.put("mule-tests-functional", "tests/functional/target/classes/");
-        moduleMapping.put("mule-tests-unit", "tests/unit/target/classes/");
-        moduleMapping.put("mule-module-launcher", "modules/launcher/target/classes/");
-        moduleMapping.put("mule-module-reboot", "modules/reboot/target/classes/");
-        moduleMapping.put("mule-tests-infrastructure", "tests/infrastructure/target/classes/");
-        moduleMapping.put("mule-module-client", "modules/client/target/classes/");
+        // Test artifacts
+        moduleMapping.put("mule-tests-functional", "/tests/functional/target/");
+        moduleMapping.put("mule-tests-unit", "/tests/unit/target/");
+        moduleMapping.put("mule-tests-infrastructure", "/tests/infrastructure/target/");
+
+        // Bootstrap artifacts
+        moduleMapping.put("mule-module-artifact", "/modules/artifact/target/");
+
+        // Modules
+        moduleMapping.put("mule-core", "/core/target/classes");
+        moduleMapping.put("mule-module-extensions-spring-support", "/modules/extensions-spring-support/target/");
+        moduleMapping.put("mule-module-tls", "/modules/tls/target/");
+        moduleMapping.put("mule-module-extensions-support", "/modules/extensions-support/target/");
+        moduleMapping.put("mule-module-spring-config", "/modules/spring-config/target/");
+        moduleMapping.put("mule-module-file-extension-common", "/modules/file-extension-common/target/");
+        moduleMapping.put("mule-transport-sockets", "/transports/sockets/target/");
+        moduleMapping.put("mule-module-container", "/modules/container/target/");
+        //moduleMapping.put("mule-module-launcher", "/modules/launcher/target/");
+        //moduleMapping.put("mule-module-reboot", "/modules/reboot/target/");
+        //moduleMapping.put("mule-module-client", "/modules/client/target/");
     }
 
-    private void addURL(final Collection<URL> collection, final MavenArtifact artifact, final Collection<URL> urls)
+    private void addURL(final Collection<URL> collection, final MavenArtifact artifact, final Collection<URL> urls, final Collection<URL> exclusions)
     {
         // Resolves the artifact from maven repository
         Optional<URL> artifactURL = urls.stream().filter(filePath -> filePath.getFile().contains(artifact.getGroupIdAsPath() + File.separator + artifact.getArtifactId() + File.separator)).findFirst();
         if (artifactURL.isPresent())
         {
-            collection.add(artifactURL.get());
+            if (!exclusions.contains(artifactURL.get()))
+            {
+                collection.add(artifactURL.get());
+            }
             // It would also include its dependencies
-            artifact.getDependencies().forEach(dependency -> addURL(collection, dependency, urls));
+            artifact.getDependencies().forEach(dependency -> addURL(collection, dependency, urls, exclusions));
         }
         else
         {
-            addModuleURL(collection, artifact, urls);
+            addModuleURL(collection, artifact, urls, exclusions);
         }
     }
 
-    private void addModuleURL(Collection<URL> collection, MavenArtifact artifact, Collection<URL> urls)
+    private void addModuleURL(Collection<URL> collection, MavenArtifact artifact, Collection<URL> urls, Collection<URL> exclusions)
     {
-        // If it is a test dependency and it is not resolved from maven repository we are in the case of a
-        // multi-module maven dependency and we don't need to add its transitive dependencies
-        if (artifact.isTestScope())
+        final String urlSuffix = moduleMapping.get(artifact.artifactId);
+        if (urlSuffix == null)
         {
-            final String urlSuffix = moduleMapping.get(artifact.artifactId);
-            if (urlSuffix != null)
-            {
-                final Optional<URL> localFile = urls.stream().filter(url -> url.toString().endsWith(urlSuffix)).findFirst();
-                if (localFile.isPresent())
-                {
-                    collection.add(localFile.get());
-                    return;
-                }
-            }
             throw new IllegalArgumentException("Cannot locate artifact as multi-module dependency: '" + artifact + "', mapping used is: " + moduleMapping);
+        }
+        final Optional<URL> localFile = urls.stream().filter(url -> url.toString().contains(urlSuffix)).findFirst();
+        if (localFile.isPresent())
+        {
+            if (!exclusions.contains(localFile.get()))
+            {
+                collection.add(localFile.get());
+            }
+            // It would also include its dependencies
+            artifact.getDependencies().stream().forEach(dependency -> addURL(collection, dependency, urls, exclusions));
         }
     }
 
