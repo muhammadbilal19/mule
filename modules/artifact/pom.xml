@@ -20,7 +20,6 @@
             <groupId>org.mule</groupId>
             <artifactId>mule-core</artifactId>
             <version>${project.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
