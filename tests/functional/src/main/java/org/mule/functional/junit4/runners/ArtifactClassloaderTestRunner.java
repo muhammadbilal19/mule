@@ -27,7 +27,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -51,7 +50,6 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
     private static final String TARGET_TEST_CLASSES = "/target/test-classes/";
     private static final String TARGET_CLASSES = "/target/classes/";
 
-    private static final String DEPENDENCIES_LIST_FILE = TARGET_TEST_CLASSES + "dependencies.list";
     private static final String DEPENDENCIES_GRAPH_FILE = TARGET_TEST_CLASSES + "dependency-graph.dot";
 
     /**
@@ -63,19 +61,6 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
     public ArtifactClassloaderTestRunner(Class<?> klass) throws InitializationError
     {
         super(klass);
-    }
-
-    public String getDependenciesListFileName(Class<?> testClass)
-    {
-        String dependenciesListFileName = DEPENDENCIES_LIST_FILE;
-        ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
-
-        if (annotation != null)
-        {
-            dependenciesListFileName = annotation.dependenciesListFile();
-        }
-
-        return dependenciesListFileName;
     }
 
     public String getDependenciesGraphFileName(Class<?> testClass)
@@ -108,13 +93,8 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
     protected ClassLoader buildArtifactClassloader(Class<?> klass) throws IOException, URISyntaxException
     {
         final String userDir = System.getProperty("user.dir");
-        final File dependenciesFile = new File(userDir, getDependenciesListFileName(klass));
         final File dependenciesGraphFile = new File(userDir, getDependenciesGraphFileName(klass));
 
-        if (!dependenciesFile.exists())
-        {
-            throw new RuntimeException(String.format("Unable to run test a '%s' was not found. Run 'mvn process-resources' to ensure this file is created before running the test", DEPENDENCIES_LIST_FILE));
-        }
         if (!dependenciesGraphFile.exists())
         {
             throw new RuntimeException(String.format("Unable to run test a '%s' was not found. Run 'mvn process-resources' to ensure this file is created before running the test", DEPENDENCIES_GRAPH_FILE));
@@ -122,20 +102,40 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
 
         final Set<URL> urls = getFullClassPathUrls();
 
-        Path dependenciesPath = Paths.get(dependenciesFile.toURI());
+        Path dependenciesPath = Paths.get(dependenciesGraphFile.toURI());
         BasicFileAttributes view = Files.getFileAttributeView(dependenciesPath, BasicFileAttributeView.class).readAttributes();
-        logger.debug("Building classloader hierarchy using maven dependency list file: '{}', created: {}, last modified: {}", dependenciesFile, view.creationTime(), view.lastModifiedTime());
+        logger.debug("Building classloader hierarchy using maven dependency graph file: '{}', created: {}, last modified: {}", dependenciesGraphFile, view.creationTime(), view.lastModifiedTime());
         // maven-dependency-plugin adds a few extra lines to the top
-        List<MavenArtifact> mavenDependencies = toMavenArtifacts(dependenciesFile);
+        Set<MavenArtifact> mavenDependencies = toMavenArtifacts(dependenciesGraphFile);
+
+        // Provided dependencies (with dependencies) are obtained first in order to avoid including them in application classloader if needed
+        Set<MavenArtifact> providedDeps = mavenDependencies.stream().filter(artifact -> artifact.isProvidedScope()).collect(Collectors.toSet());
+        providedDeps.forEach(art -> art.removeTestDependencies());
+        //providedDeps.stream().map(art -> art.getDependencies()).collect(Collectors.toSet());
+
+        Set<URL> containerDependenciesProvided = new HashSet<>();
+        providedDeps.stream().forEach(artifact -> {
+            addURL(containerDependenciesProvided, artifact, urls);
+        });
 
         // Lists of urls to be used by different classloaders
         Set<URL> appURLs = new HashSet<>();
         Set<URL> testURLs = new HashSet<>();
         
         // app libraries should be all the dependencies with scope 'compile'
-        mavenDependencies.stream().filter(artifact -> artifact.isCompileScope()).forEach(artifact -> {fillDependencies(artifact, dependenciesGraphFile); addURL(appURLs, artifact, urls);});
+        mavenDependencies.stream().filter(artifact -> artifact.isCompileScope()).forEach(artifact -> {
+            if(!providedDeps.contains(artifact))
+            {
+                addURL(appURLs, artifact, urls);
+            }
+        });
         // test libraries should be all the dependencies with scope 'test'
-        mavenDependencies.stream().filter(artifact -> artifact.isTestScope()).forEach(artifact -> {fillDependencies(artifact, dependenciesGraphFile); addURL(testURLs, artifact, urls);});
+        mavenDependencies.stream().filter(artifact -> artifact.isTestScope()).forEach(artifact -> {
+            if(!providedDeps.contains(artifact))
+            {
+                addURL(testURLs, artifact, urls);
+            }
+        });
 
         // when multi-module is used classes folders should be added as plugin classloader libraries for this artifact
         String currentArtifactFolderName = new File(userDir).getName();
@@ -151,13 +151,6 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         containerURLs.addAll(urls);
         containerURLs.removeAll(appURLs);
         containerURLs.removeAll(testURLs);
-        // Provided dependencies (with dependencies) are obtained first in order to avoid including them in application classloader if needed
-        Set<URL> containerDependenciesProvided = new HashSet<>();
-        mavenDependencies.stream().filter(artifact -> artifact.isProvidedScope()).forEach(artifact -> {
-            fillDependencies(artifact, dependenciesGraphFile);
-            addURL(containerDependenciesProvided, artifact, urls);
-        });
-        containerURLs.addAll(containerDependenciesProvided);
 
         // Container classLoader
         logClassLoaderUrls("CONTAINER", containerURLs);
@@ -184,11 +177,25 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         }
     }
 
-    private void fillDependencies(MavenArtifact artifact, File dependenciesGraphFile)
+    private MavenArtifact fillDependencies(MavenArtifact artifact, File dependenciesGraphFile)
     {
         try
         {
             artifact.setDependencies(buildDependenciesFor(artifact, dependenciesGraphFile));
+            return artifact;
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException("Could get dependencies for artifact: " + artifact, e);
+        }
+    }
+
+    private MavenArtifact fillDependencies(MavenArtifact artifact, File dependenciesGraphFile, Collection<MavenArtifact> exclusions)
+    {
+        try
+        {
+            artifact.setDependencies(buildDependenciesFor(artifact, dependenciesGraphFile).stream().filter(art -> !exclusions.contains(art)).collect(Collectors.toSet()));
+            return artifact;
         }
         catch (IOException e)
         {
@@ -201,7 +208,7 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         return Files.readAllLines(dependenciesGraph.toPath(),
                                   Charset.defaultCharset()).stream()
                 .filter(line -> line.contains("->") &&
-                                line.split("->")[0].contains(artifact.getGroupId() + MAVEN_DEPENDENCIES_DELIMITER + artifact.getArtifactId())).map(artifactLine -> parseMavenArtifactFromDepGraph(artifactLine)).collect(Collectors.toSet());
+                                line.split("->")[0].contains(artifact.getGroupId() + MAVEN_DEPENDENCIES_DELIMITER + artifact.getArtifactId())).map(artifactLine -> parseDependencyMavenArtifactFromDepGraph(artifactLine)).collect(Collectors.toSet());
     }
     
     /**
@@ -231,11 +238,14 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         }
     }
 
-    private List<MavenArtifact> toMavenArtifacts(File mavenDependenciesFile) throws IOException
+    private Set<MavenArtifact> toMavenArtifacts(File mavenDependenciesFile) throws IOException
     {
+        //return Files.readAllLines(mavenDependenciesFile.toPath(),
+        //                          Charset.defaultCharset()).stream()
+        //        .filter(line -> line.length() - line.replace(MAVEN_DEPENDENCIES_DELIMITER, "").length() >= 4).map(artifactLine -> parseMavenArtifact(artifactLine.trim())).collect(Collectors.toList());
         return Files.readAllLines(mavenDependenciesFile.toPath(),
                                   Charset.defaultCharset()).stream()
-                .filter(line -> line.length() - line.replace(MAVEN_DEPENDENCIES_DELIMITER, "").length() >= 4).map(artifactLine -> parseMavenArtifact(artifactLine.trim())).collect(Collectors.toList());
+                .filter(line -> line.contains("->")).map(artifactLine -> fillDependencies(parseMavenArtifactFromDepGraph(artifactLine), mavenDependenciesFile)).collect(Collectors.toSet());
     }
 
     private static final Map<String, String> moduleMapping = new HashMap();
@@ -251,7 +261,11 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         moduleMapping.put("mule-module-artifact", "/modules/artifact/target/");
 
         // Modules
+        moduleMapping.put("mule-module-file", "/extensions/file");
+        moduleMapping.put("mule-module-ftp", "/extensions/ftp");
+        moduleMapping.put("mule-module-validation", "/extensions/validation");
         moduleMapping.put("mule-core", "/core/target/classes");
+        moduleMapping.put("mule-core-tests", "/core-tests/target/classes");
         moduleMapping.put("mule-module-extensions-spring-support", "/modules/extensions-spring-support/target/");
         moduleMapping.put("mule-module-tls", "/modules/tls/target/");
         moduleMapping.put("mule-module-extensions-support", "/modules/extensions-support/target/");
@@ -299,7 +313,7 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         }
         else
         {
-            throw new IllegalArgumentException("Cannot locate artifact as multi-module dependency: '" + artifact + "', mapping used is: " + urlSuffix);
+            //throw new IllegalArgumentException("Cannot locate artifact as multi-module dependency: '" + artifact + "', mapping used is: " + urlSuffix);
         }
     }
 
@@ -369,7 +383,7 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         return new MavenArtifact(groupId, artifactId, type, version, scope);
     }
 
-    private MavenArtifact parseMavenArtifactFromDepGraph(String line)
+    private MavenArtifact parseDependencyMavenArtifactFromDepGraph(String line)
     {
         String artifactLine = line.split("->")[1];
         if (artifactLine.contains("["))
@@ -382,6 +396,17 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         }
         return parseMavenArtifact(artifactLine.trim());
     }
+
+    private MavenArtifact parseMavenArtifactFromDepGraph(String line)
+    {
+        String artifactLine = line.split("->")[0];
+        if (artifactLine.contains("\""))
+        {
+            artifactLine = artifactLine.substring(artifactLine.indexOf("\"") + 1, artifactLine.lastIndexOf("\""));
+        }
+        return parseMavenArtifact(artifactLine.trim());
+    }
+
 
     private class MavenArtifact
     {
@@ -480,19 +505,7 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
             {
                 return false;
             }
-            if (!artifactId.equals(that.artifactId))
-            {
-                return false;
-            }
-            if (!type.equals(that.type))
-            {
-                return false;
-            }
-            if (!version.equals(that.version))
-            {
-                return false;
-            }
-            return scope.equals(that.scope);
+            return artifactId.equals(that.artifactId);
 
         }
 
@@ -501,10 +514,12 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         {
             int result = groupId.hashCode();
             result = 31 * result + artifactId.hashCode();
-            result = 31 * result + type.hashCode();
-            result = 31 * result + version.hashCode();
-            result = 31 * result + scope.hashCode();
             return result;
+        }
+
+        public void removeTestDependencies()
+        {
+            dependencies = dependencies.stream().filter(dep -> !dep.isTestScope()).collect(Collectors.toSet());
         }
     }
 }
