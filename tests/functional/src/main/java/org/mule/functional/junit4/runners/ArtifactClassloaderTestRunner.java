@@ -6,17 +6,13 @@
  */
 package org.mule.functional.junit4.runners;
 
-import org.mule.runtime.core.util.SerializationUtils;
 import org.mule.runtime.module.artifact.classloader.ArtifactClassLoader;
-import org.mule.runtime.module.artifact.classloader.DisposableClassLoader;
 import org.mule.runtime.module.artifact.classloader.MuleArtifactClassLoader;
 
 import com.google.common.collect.Sets;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -37,24 +33,15 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.junit.runner.Description;
-import org.junit.runner.Runner;
-import org.junit.runner.notification.Failure;
-import org.junit.runner.notification.RunNotifier;
-import org.junit.runners.JUnit4;
 import org.junit.runners.model.InitializationError;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Runner that creates a similar classloader isolation hierarchy as Mule uses on runtime.
  * The classloaders here created for running the test have the following hierarchy, from parent to child:
  * ContainerClassLoader (it also adds junit and org.hamcrest packages as PARENT_ONLY look up strategy)
  */
-public class ArtifactClassloaderTestRunner extends Runner
+public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTestRunner
 {
-
-    protected final transient Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private static final String DOT_CHARACTER = ".";
     private static final String MAVEN_DEPENDENCIES_DELIMITER = ":";
@@ -67,11 +54,6 @@ public class ArtifactClassloaderTestRunner extends Runner
     private static final String DEPENDENCIES_LIST_FILE = TARGET_TEST_CLASSES + "dependencies.list";
     private static final String DEPENDENCIES_GRAPH_FILE = TARGET_TEST_CLASSES + "dependency-graph.dot";
 
-    private final Object innerRunner;
-    private final Class<?> innerRunnerClass;
-
-    private ClassLoader artifactClassLoader;
-
     /**
      * Creates a Runner to run {@code klass}
      *
@@ -80,35 +62,7 @@ public class ArtifactClassloaderTestRunner extends Runner
      */
     public ArtifactClassloaderTestRunner(Class<?> klass) throws InitializationError
     {
-        try
-        {
-            logger.debug("Running with runner: '{}'", this.getClass().getName());
-            artifactClassLoader = buildArtifactClassloader(klass);
-            innerRunnerClass = artifactClassLoader.loadClass(getDelegateRunningToOn(klass).getName());
-            Class<?> testClass = artifactClassLoader.loadClass(klass.getName());
-            innerRunner = innerRunnerClass.cast(innerRunnerClass.getConstructor(Class.class).newInstance(testClass));
-        }
-        catch (Exception e)
-        {
-            throw new InitializationError(e);
-        }
-    }
-
-    /**
-     * @param testClass
-     * @return the delegate {@link Runner} to be used or {@link JUnit4} if no one is defined.
-     */
-    public Class<? extends Runner> getDelegateRunningToOn(Class<?> testClass)
-    {
-        Class<? extends Runner> runnerClass = JUnit4.class;
-        ArtifactRunningDelegate annotation = testClass.getAnnotation(ArtifactRunningDelegate.class);
-
-        if (annotation != null)
-        {
-            runnerClass = annotation.value();
-        }
-
-        return runnerClass;
+        super(klass);
     }
 
     public String getDependenciesListFileName(Class<?> testClass)
@@ -150,7 +104,8 @@ public class ArtifactClassloaderTestRunner extends Runner
         return Sets.newHashSet(extraPackages.split(","));
     }
 
-    private ClassLoader buildArtifactClassloader(Class<?> klass) throws IOException, URISyntaxException
+    @Override
+    protected ClassLoader buildArtifactClassloader(Class<?> klass) throws IOException, URISyntaxException
     {
         final String userDir = System.getProperty("user.dir");
         final File dependenciesFile = new File(userDir, getDependenciesListFileName(klass));
@@ -426,54 +381,6 @@ public class ArtifactClassloaderTestRunner extends Runner
             artifactLine = artifactLine.substring(artifactLine.indexOf("\"") + 1, artifactLine.lastIndexOf("\""));
         }
         return parseMavenArtifact(artifactLine.trim());
-    }
-
-    @Override
-    public Description getDescription()
-    {
-        try
-        {
-            final byte[] serialized = SerializationUtils.serialize((Serializable) innerRunnerClass.getMethod("getDescription").invoke(innerRunner));
-            return (Description) SerializationUtils.deserialize(serialized);
-        }
-        catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
-                | SecurityException e)
-        {
-            throw new RuntimeException("Could not get description", e);
-        }
-    }
-
-    @Override
-    public void run(RunNotifier notifier)
-    {
-        final ClassLoader original = Thread.currentThread().getContextClassLoader();
-        try
-        {
-            Thread.currentThread().setContextClassLoader(artifactClassLoader);
-            innerRunnerClass.getMethod("run", RunNotifier.class).invoke(innerRunner, notifier);
-        }
-        catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
-                | SecurityException e)
-        {
-            notifier.fireTestFailure(new Failure(getDescription(), e));
-        }
-        finally
-        {
-            Thread.currentThread().setContextClassLoader(original);
-
-            if (artifactClassLoader instanceof DisposableClassLoader)
-            {
-                try
-                {
-                    ((DisposableClassLoader) artifactClassLoader).dispose();
-                }
-                catch (Exception e)
-                {
-                    // Ignore
-                }
-            }
-            artifactClassLoader = null;
-        }
     }
 
     private class MavenArtifact

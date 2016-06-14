@@ -17,12 +17,12 @@ import org.junit.runner.Runner;
 import org.junit.runners.JUnit4;
 
 /**
- * Specifies the {@link Runner} that {@link ArtifactClassloaderTestRunner} delegates to.
+ * Specifies the {@link Runner} that {@link AbstractClassLoaderIsolatedTestRunner} delegates to.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Inherited
-public @interface ArtifactRunningDelegate
+public @interface ClassLoaderIsolatedTestRunnerDelegateTo
 {
 
     /**

@@ -8,7 +8,7 @@ package org.mule.extension.validation;
 
 import org.mule.extension.validation.internal.validator.NumberType;
 import org.mule.functional.junit4.FlowRunner;
-import org.mule.functional.junit4.runners.ArtifactRunningDelegate;
+import org.mule.functional.junit4.runners.ClassLoaderIsolatedTestRunnerDelegateTo;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -16,7 +16,7 @@ import java.util.Collection;
 import org.junit.Test;
 import org.junit.runners.Parameterized;
 
-@ArtifactRunningDelegate(Parameterized.class)
+@ClassLoaderIsolatedTestRunnerDelegateTo(Parameterized.class)
 public class NumberValidationTestCase extends ValidationTestCase
 {
 
