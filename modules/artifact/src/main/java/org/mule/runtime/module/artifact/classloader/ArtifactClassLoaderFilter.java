@@ -69,12 +69,7 @@ public class ArtifactClassLoaderFilter implements ClassLoaderFilter
     @Override
     public boolean exportsResource(String name)
     {
-        //checkArgument(!StringUtils.isEmpty(name), "Resource name cannot be empty");
         checkArgument(name != null, "Resource name cannot be null");
-        //if(StringUtils.isEmpty(name))
-        //{
-        //    return true;
-        //}
         final String resourcePackage = getResourceFolder(name);
 
         return exportedResourcePackages.contains(resourcePackage);

@@ -32,4 +32,10 @@ public class TestContainerClassLoaderFactory extends ContainerClassLoaderFactory
     {
         return ImmutableSet.<String>builder().addAll(super.getBootPackages()).addAll(extraBootPackages).build();
     }
+
+    @Override
+    public Set<String> getSystemPackages()
+    {
+        return super.getSystemPackages();
+    }
 }

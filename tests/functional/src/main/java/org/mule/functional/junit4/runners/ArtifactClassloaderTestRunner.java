@@ -173,48 +173,49 @@ public class ArtifactClassloaderTestRunner extends Runner
         // maven-dependency-plugin adds a few extra lines to the top
         List<MavenArtifact> mavenDependencies = toMavenArtifacts(dependenciesFile);
 
-        // Provided dependencies (with dependencies) are obtained first in order to avoid including them in application classloader if needed
-        Set<URL> containerDependenciesProvided = new HashSet<>();
-        mavenDependencies.stream().filter(artifact -> artifact.isProvidedScope()).forEach(artifact -> {fillDependencies(artifact, dependenciesGraphFile); addURL(containerDependenciesProvided, artifact, urls, Collections.EMPTY_LIST);});
-
         // Lists of urls to be used by different classloaders
-        Set<URL> pluginURLs = new HashSet<>();
-        Set<URL> applicationURLs = new HashSet<>();
+        Set<URL> appURLs = new HashSet<>();
+        Set<URL> testURLs = new HashSet<>();
         
-        // plugin libraries should be all the dependencies with scope 'compile'
-        mavenDependencies.stream().filter(artifact -> artifact.isCompileScope()).forEach(artifact -> {fillDependencies(artifact, dependenciesGraphFile); addURL(pluginURLs, artifact, urls, Collections.EMPTY_LIST);});
-
-        // plugin libraries should be all the dependencies with scope 'test'
-        mavenDependencies.stream().filter(artifact -> artifact.isTestScope()).forEach(artifact -> {fillDependencies(artifact, dependenciesGraphFile); addURL(applicationURLs, artifact, urls, containerDependenciesProvided);});
+        // app libraries should be all the dependencies with scope 'compile'
+        mavenDependencies.stream().filter(artifact -> artifact.isCompileScope()).forEach(artifact -> {fillDependencies(artifact, dependenciesGraphFile); addURL(appURLs, artifact, urls);});
+        // test libraries should be all the dependencies with scope 'test'
+        mavenDependencies.stream().filter(artifact -> artifact.isTestScope()).forEach(artifact -> {fillDependencies(artifact, dependenciesGraphFile); addURL(testURLs, artifact, urls);});
 
         // when multi-module is used classes folders should be added as plugin classloader libraries for this artifact
-        String currentArtifactFolderName = new File(System.getProperty("user.dir")).getName();
+        String currentArtifactFolderName = new File(userDir).getName();
 
         // /target-classes only for the current artifact being tested
-        urls.stream().filter(url -> url.getFile().trim().endsWith(currentArtifactFolderName + TARGET_CLASSES)).forEach(url -> pluginURLs.add(url));
+        urls.stream().filter(url -> url.getFile().trim().endsWith(currentArtifactFolderName + TARGET_CLASSES)).forEach(url -> appURLs.add(url));
 
         // Tests classes should be app classloader
-        applicationURLs.addAll(urls.stream().filter(url -> url.getFile().trim().endsWith(currentArtifactFolderName + TARGET_TEST_CLASSES)).collect(Collectors.toList()));
+        testURLs.addAll(urls.stream().filter(url -> url.getFile().trim().endsWith(currentArtifactFolderName + TARGET_TEST_CLASSES)).collect(Collectors.toList()));
 
         // The container contains anything that is not application either extension classloader urls
         Set<URL> containerURLs = new HashSet<>();
         containerURLs.addAll(urls);
-        containerURLs.removeAll(pluginURLs);
-        containerURLs.removeAll(applicationURLs);
+        containerURLs.removeAll(appURLs);
+        containerURLs.removeAll(testURLs);
+        // Provided dependencies (with dependencies) are obtained first in order to avoid including them in application classloader if needed
+        Set<URL> containerDependenciesProvided = new HashSet<>();
+        mavenDependencies.stream().filter(artifact -> artifact.isProvidedScope()).forEach(artifact -> {
+            fillDependencies(artifact, dependenciesGraphFile);
+            addURL(containerDependenciesProvided, artifact, urls);
+        });
         containerURLs.addAll(containerDependenciesProvided);
 
         // Container classLoader
         logClassLoaderUrls("CONTAINER", containerURLs);
         final TestContainerClassLoaderFactory testContainerClassLoaderFactory = new TestContainerClassLoaderFactory(getExtraBootPackages(klass));
-        ArtifactClassLoader containerClassLoader = testContainerClassLoaderFactory.createContainerClassLoader(new SystemContainerClassLoader(containerURLs.toArray(new URL[containerURLs.size()]), testContainerClassLoaderFactory.getBootPackages()));
-
-        // Extension/Plugin classLoader
-        logClassLoaderUrls("PLUGIN", pluginURLs);
-        MuleArtifactClassLoader pluginClassLoader = new MuleArtifactClassLoader("plugin", pluginURLs.toArray(new URL[pluginURLs.size()]), containerClassLoader.getClassLoader(), containerClassLoader.getClassLoaderLookupPolicy());
+        ArtifactClassLoader containerClassLoader = testContainerClassLoaderFactory.createContainerClassLoader(new SystemContainerClassLoader(containerURLs.toArray(new URL[containerURLs.size()]), testContainerClassLoaderFactory.getBootPackages(), testContainerClassLoaderFactory.getSystemPackages()));
 
         // Application classLoader
-        logClassLoaderUrls("APPLICATION", applicationURLs);
-        return new MuleArtifactClassLoader("application", applicationURLs.toArray(new URL[applicationURLs.size()]), pluginClassLoader.getClassLoader(), pluginClassLoader.getClassLoaderLookupPolicy()).getClassLoader();
+        logClassLoaderUrls("APP", appURLs);
+        MuleArtifactClassLoader pluginClassLoader = new MuleArtifactClassLoader("app", appURLs.toArray(new URL[appURLs.size()]), containerClassLoader.getClassLoader(), containerClassLoader.getClassLoaderLookupPolicy());
+
+        // Test classLoader
+        logClassLoaderUrls("TEST", testURLs);
+        return new MuleArtifactClassLoader("test", testURLs.toArray(new URL[testURLs.size()]), pluginClassLoader.getClassLoader(), pluginClassLoader.getClassLoaderLookupPolicy()).getClassLoader();
     }
 
     private void logClassLoaderUrls(String classLoaderName, Collection<URL> containerURLs)
@@ -242,7 +243,6 @@ public class ArtifactClassloaderTestRunner extends Runner
 
     private Set<MavenArtifact> buildDependenciesFor(MavenArtifact artifact, File dependenciesGraph) throws IOException
     {
-        //TODO too ugly!
         return Files.readAllLines(dependenciesGraph.toPath(),
                                   Charset.defaultCharset()).stream()
                 .filter(line -> line.contains("->") &&
@@ -304,31 +304,32 @@ public class ArtifactClassloaderTestRunner extends Runner
         moduleMapping.put("mule-module-file-extension-common", "/modules/file-extension-common/target/");
         moduleMapping.put("mule-transport-sockets", "/transports/sockets/target/");
         moduleMapping.put("mule-module-container", "/modules/container/target/");
-        //moduleMapping.put("mule-module-launcher", "/modules/launcher/target/");
-        //moduleMapping.put("mule-module-reboot", "/modules/reboot/target/");
-        //moduleMapping.put("mule-module-client", "/modules/client/target/");
+        moduleMapping.put("mule-module-launcher", "/modules/launcher/target/");
+        moduleMapping.put("mule-module-reboot", "/modules/reboot/target/");
     }
 
-    private void addURL(final Collection<URL> collection, final MavenArtifact artifact, final Collection<URL> urls, final Collection<URL> exclusions)
+    private void addURL(final Collection<URL> collection, final MavenArtifact artifact, final Collection<URL> urls)
     {
         // Resolves the artifact from maven repository
         Optional<URL> artifactURL = urls.stream().filter(filePath -> filePath.getFile().contains(artifact.getGroupIdAsPath() + File.separator + artifact.getArtifactId() + File.separator)).findFirst();
         if (artifactURL.isPresent())
         {
-            if (!exclusions.contains(artifactURL.get()))
-            {
-                collection.add(artifactURL.get());
-            }
-            // It would also include its dependencies
-            artifact.getDependencies().forEach(dependency -> addURL(collection, dependency, urls, exclusions));
+            collection.add(artifactURL.get());
+            addDependenciesURL(collection, artifact, urls);
         }
         else
         {
-            addModuleURL(collection, artifact, urls, exclusions);
+            addModuleURL(collection, artifact, urls);
         }
     }
 
-    private void addModuleURL(Collection<URL> collection, MavenArtifact artifact, Collection<URL> urls, Collection<URL> exclusions)
+    private void addDependenciesURL(Collection<URL> collection, MavenArtifact artifact, Collection<URL> urls)
+    {
+        // It would also include its dependencies
+        artifact.getDependencies().forEach(dependency -> addURL(collection, dependency, urls));
+    }
+
+    private void addModuleURL(Collection<URL> collection, MavenArtifact artifact, Collection<URL> urls)
     {
         final String urlSuffix = moduleMapping.get(artifact.artifactId);
         if (urlSuffix == null)
@@ -338,23 +339,25 @@ public class ArtifactClassloaderTestRunner extends Runner
         final Optional<URL> localFile = urls.stream().filter(url -> url.toString().contains(urlSuffix)).findFirst();
         if (localFile.isPresent())
         {
-            if (!exclusions.contains(localFile.get()))
-            {
-                collection.add(localFile.get());
-            }
-            // It would also include its dependencies
-            artifact.getDependencies().stream().forEach(dependency -> addURL(collection, dependency, urls, exclusions));
+            collection.add(localFile.get());
+            addDependenciesURL(collection, artifact, urls);
+        }
+        else
+        {
+            throw new IllegalArgumentException("Cannot locate artifact as multi-module dependency: '" + artifact + "', mapping used is: " + urlSuffix);
         }
     }
 
     public static class SystemContainerClassLoader extends URLClassLoader
     {
         private final Set<String> bootPackages;
+        private final Set<String> systemPackages;
 
-        public SystemContainerClassLoader(URL[] urls, Set<String> bootPackages)
+        public SystemContainerClassLoader(URL[] urls, Set<String> bootPackages, Set<String> systemPackages)
         {
             super(urls, null);
             this.bootPackages = bootPackages;
+            this.systemPackages = systemPackages;
         }
 
         @Override
@@ -367,26 +370,35 @@ public class ArtifactClassloaderTestRunner extends Runner
                 return result;
             }
 
-            if (isBootPackage(name))
+            if (isBootPackage(name) || isSystemPackage(name))
             {
                 return getSystemClassLoader().loadClass(name);
             }
             else
             {
-                return findClass(name);
+                throw new ClassNotFoundException(name);
             }
         }
 
         private boolean isBootPackage(String name)
         {
-            for (String bootPackage : bootPackages)
+            return isFromPackage(bootPackages, name);
+        }
+
+        private boolean isSystemPackage(String name)
+        {
+            return isFromPackage(systemPackages, name);
+        }
+
+        private boolean isFromPackage(Set<String> packages, String name)
+        {
+            for (String aPackage : packages)
             {
-                if (name.startsWith(bootPackage))
+                if (name.startsWith(aPackage))
                 {
                     return true;
                 }
             }
-
             return false;
         }
     }
@@ -466,7 +478,6 @@ public class ArtifactClassloaderTestRunner extends Runner
 
     private class MavenArtifact
     {
-
         private String groupId;
         private String artifactId;
         private String type;
@@ -587,11 +598,6 @@ public class ArtifactClassloaderTestRunner extends Runner
             result = 31 * result + version.hashCode();
             result = 31 * result + scope.hashCode();
             return result;
-        }
-
-        public boolean isJunit()
-        {
-            return artifactId.contains("junit") || artifactId.contains("hamcrest") || artifactId.contains("mockito");
         }
     }
 }
