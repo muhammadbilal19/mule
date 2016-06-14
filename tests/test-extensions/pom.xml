@@ -42,6 +42,7 @@
             <groupId>org.mule.tests</groupId>
             <artifactId>mule-tests-unit</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>
