@@ -287,7 +287,7 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
             if (path.contains(moduleFolder))
             {
                 String pathSuffix = path.substring(path.lastIndexOf(moduleFolder.toString()) + moduleFolder.length(), path.length());
-                return pathSuffix.matches(explodedUrlSuffix.toString());
+                return pathSuffix.matches(explodedUrlSuffix.toString()) || pathSuffix.matches(packagedUrlSuffix.toString());
             }
             return false;
         }).findFirst();
