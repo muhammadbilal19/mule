@@ -7,8 +7,8 @@
 
 package org.mule.runtime.config.spring.dsl.model;
 
-import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildConfiguration;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildCollectionConfiguration;
+import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildConfiguration;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromFixedValue;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromReferenceObject;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromSimpleParameter;
@@ -29,6 +29,7 @@ import org.mule.runtime.config.spring.factories.AsyncMessageProcessorsFactoryBea
 import org.mule.runtime.config.spring.factories.ChoiceRouterFactoryBean;
 import org.mule.runtime.config.spring.factories.MessageProcessorChainFactoryBean;
 import org.mule.runtime.config.spring.factories.MessageProcessorFilterPairFactoryBean;
+import org.mule.runtime.config.spring.factories.OperationChainObjectFactory;
 import org.mule.runtime.config.spring.factories.PollingMessageSourceFactoryBean;
 import org.mule.runtime.config.spring.factories.ResponseMessageProcessorsFactoryBean;
 import org.mule.runtime.config.spring.factories.ScatterGatherRouterFactoryBean;
@@ -53,6 +54,13 @@ import org.mule.runtime.core.exception.ChoiceMessagingExceptionStrategy;
 import org.mule.runtime.core.exception.DefaultMessagingExceptionStrategy;
 import org.mule.runtime.core.exception.RedeliveryExceeded;
 import org.mule.runtime.core.exception.RollbackMessagingExceptionStrategy;
+import org.mule.runtime.core.extension.define.ConfigOperation;
+import org.mule.runtime.core.extension.define.ModuleOperation;
+import org.mule.runtime.core.extension.define.OperationChain;
+import org.mule.runtime.core.extension.define.OperationParameter;
+import org.mule.runtime.core.extension.execute.ConfigExecutor;
+import org.mule.runtime.core.extension.execute.OperationExecutor;
+import org.mule.runtime.core.extension.execute.ParameterRef;
 import org.mule.runtime.core.processor.AsyncDelegateMessageProcessor;
 import org.mule.runtime.core.processor.IdempotentRedeliveryPolicy;
 import org.mule.runtime.core.processor.ResponseMessageProcessorAdapter;
@@ -83,6 +91,7 @@ import org.mule.runtime.core.transaction.lookup.Resin3TransactionManagerLookupFa
 import org.mule.runtime.core.transaction.lookup.WeblogicTransactionManagerLookupFactory;
 import org.mule.runtime.core.transaction.lookup.WebsphereTransactionManagerLookupFactory;
 import org.mule.runtime.core.transformer.AbstractTransformer;
+import org.mule.runtime.core.transformer.simple.AddFlowVariableTransformer;
 import org.mule.runtime.core.transformer.simple.SetPayloadMessageProcessor;
 
 import java.util.LinkedList;
@@ -259,6 +268,75 @@ public class CoreComponentBuildingDefinitionProvider implements ComponentBuildin
                                                  .withSetterParameterDefinition(NAME, fromSimpleParameter(NAME).build())
                                                  .asPrototype()
                                                  .build());
+
+        //<operation> + <parameters> + <parameter> + <body>
+        componentBuildingDefinitions.add(baseDefinition.copy()
+                                                 .withIdentifier("operation")
+                                                 .withTypeDefinition(fromType(OperationChain.class))
+                                                 .withObjectFactoryType(OperationChainObjectFactory.class)
+                                                 .withSetterParameterDefinition("parameters", fromChildConfiguration(List.class).withWrapperIdentifier("parameters").build())
+                                                 .withSetterParameterDefinition(MESSAGE_PROCESSORS, fromChildConfiguration(List.class).withWrapperIdentifier("body").build())
+                                                 .withSetterParameterDefinition(NAME, fromSimpleParameter(NAME).build())
+                                                 .build());
+        componentBuildingDefinitions.add(baseDefinition.copy()
+                                                 .withIdentifier("parameters")
+                                                 .withTypeDefinition(fromType(List.class))
+                                                 .build());
+        componentBuildingDefinitions.add(baseDefinition.copy()
+                                                 .withIdentifier("body")
+                                                 .withTypeDefinition(fromType(List.class))
+                                                 .build());
+        componentBuildingDefinitions.add(baseDefinition.copy()
+                                                 .withIdentifier("parameter")
+                                                 .withTypeDefinition(fromType(OperationParameter.class))
+                                                 .withSetterParameterDefinition("parameterName", fromSimpleParameter("parameterName").build())
+                                                 .withSetterParameterDefinition("defaultValue", fromSimpleParameter("defaultValue").build())
+                                                 .build());
+        //<module>
+        componentBuildingDefinitions.add(baseDefinition.copy()
+                                                 .withIdentifier("module")
+                                                 .withTypeDefinition(fromType(ModuleOperation.class))
+                                                 //.withConstructorParameterDefinition(fromSimpleReferenceParameter("operation").build())
+                                                 .withSetterParameterDefinition("operations", fromChildCollectionConfiguration(OperationChain.class).build())
+                                                 .withSetterParameterDefinition("config", fromChildConfiguration(ConfigOperation.class).build())
+                                                 .withSetterParameterDefinition(NAME, fromSimpleParameter(NAME).build())
+                                                 .build());
+        //<config>
+        componentBuildingDefinitions.add(baseDefinition.copy()
+                                                 .withIdentifier("config")
+                                                 .withTypeDefinition(fromType(ConfigOperation.class))
+                                                 .withSetterParameterDefinition("parameters", fromChildConfiguration(List.class).withWrapperIdentifier("parameters").build())
+                                                 .withSetterParameterDefinition("bolsa", fromChildCollectionConfiguration(Object.class).build())
+                                                 .withSetterParameterDefinition(NAME, fromSimpleParameter(NAME).build())
+                                                 .build());
+        //<operation-ref>
+        componentBuildingDefinitions.add(baseDefinition.copy()
+                                                 .withIdentifier("operation-ref")
+                                                 .withTypeDefinition(fromType(OperationExecutor.class))
+                                                 //.withConstructorParameterDefinition(fromSimpleReferenceParameter("operation").build()) //TODO need to change fromSimpleReferenceParameter to fromSimpleParameter due to the fact I need to look it up if no module is defined
+                                                 .withConstructorParameterDefinition(fromSimpleParameter("operation").build())
+                                                 //TODO talk to PLG, the #fromChildCollectionConfiguration seems not to be working, but it does for the setter one
+                                                 //.withConstructorParameterDefinition(fromChildCollectionConfiguration(ParameterRef.class).withDefaultValue(Collections.emptyList()).build())
+                                                 .withSetterParameterDefinition("parameters", fromChildConfiguration(ParameterRef.class).build())
+                                                 .withSetterParameterDefinition("module", fromSimpleReferenceParameter("module").build())
+                                                 .withSetterParameterDefinition("configExecutor", fromSimpleReferenceParameter("config").build())
+                                                 .build());
+        //<config-ref>
+        componentBuildingDefinitions.add(baseDefinition.copy()
+                                                 .withIdentifier("config-ref")
+                                                 .withTypeDefinition(fromType(ConfigExecutor.class))
+                                                 .withSetterParameterDefinition("parameters", fromChildConfiguration(ParameterRef.class).build())
+                                                 .withSetterParameterDefinition("module", fromSimpleReferenceParameter("module").build())
+                                                 .withSetterParameterDefinition(NAME, fromSimpleParameter(NAME).build())
+                                                 .build());
+        //<parameter-ref>
+        componentBuildingDefinitions.add(baseDefinition.copy()
+                                                 .withIdentifier("parameter-ref")
+                                                 .withTypeDefinition(fromType(ParameterRef.class))
+                                                 .withSetterParameterDefinition("parameterName", fromSimpleParameter("parameterName").build())
+                                                 .withSetterParameterDefinition("value", fromSimpleParameter("value").build())
+                                                 .build());
+
         componentBuildingDefinitions.add(baseDefinition.copy()
                                                  .withIdentifier(RESPONSE)
                                                  .withTypeDefinition(fromType(ResponseMessageProcessorAdapter.class))
@@ -487,6 +565,13 @@ public class CoreComponentBuildingDefinitionProvider implements ComponentBuildin
                                                  .withSetterParameterDefinition("enricherPropagatesSessionVariableChanges", fromSimpleParameter("enricherPropagatesSessionVariableChanges").build())
                                                  .withSetterParameterDefinition("extensions", fromChildCollectionConfiguration(Object.class).build())
                                                  .withSetterParameterDefinition("defaultObjectSerializer", fromSimpleReferenceParameter("defaultObjectSerializer-ref").build())
+                                                 .build());
+
+        componentBuildingDefinitions.add(baseDefinition.copy()
+                                                 .withIdentifier("set-variable")
+                                                 .withTypeDefinition(fromType(AddFlowVariableTransformer.class))
+                                                 .withSetterParameterDefinition("identifier", fromSimpleParameter("variableName").build())
+                                                 .withSetterParameterDefinition("value", fromSimpleParameter("value").build())
                                                  .build());
         return componentBuildingDefinitions;
     }

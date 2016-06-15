@@ -6,17 +6,19 @@
  */
 package org.mule.runtime.core.el.mvel;
 
+import org.mule.mvel2.ParserConfiguration;
+import org.mule.mvel2.integration.VariableResolver;
+import org.mule.mvel2.integration.VariableResolverFactory;
 import org.mule.runtime.core.DefaultMuleMessage;
+import org.mule.runtime.core.DefaultOperationMuleEvent;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.core.api.el.VariableAssignmentCallback;
 import org.mule.runtime.core.el.context.FlowVariableMapContext;
 import org.mule.runtime.core.el.context.MessageContext;
+import org.mule.runtime.core.el.context.ParamVariableMapContext;
 import org.mule.runtime.core.el.context.SessionVariableMapContext;
-import org.mule.mvel2.ParserConfiguration;
-import org.mule.mvel2.integration.VariableResolver;
-import org.mule.mvel2.integration.VariableResolverFactory;
 
 import java.util.Map;
 
@@ -31,6 +33,7 @@ public class MessageVariableResolverFactory extends MuleBaseVariableResolverFact
     public static final String MESSAGE_PAYLOAD = MESSAGE + "." + PAYLOAD;
     public static final String FLOW_VARS = "flowVars";
     public static final String SESSION_VARS = "sessionVars";
+    public static final String PARAM_VARS = "paramVars";
 
     private MuleEvent event;
     private MuleContext muleContext;
@@ -63,7 +66,8 @@ public class MessageVariableResolverFactory extends MuleBaseVariableResolverFact
     {
         return MESSAGE.equals(name) || PAYLOAD.equals(name) || FLOW_VARS.equals(name)
                || EXCEPTION.equals(name) || SESSION_VARS.equals(name)
-               || MVELExpressionLanguageContext.MULE_MESSAGE_INTERNAL_VARIABLE.equals(name);
+               || MVELExpressionLanguageContext.MULE_MESSAGE_INTERNAL_VARIABLE.equals(name)
+               || PARAM_VARS.equals(name);
     }
 
     @Override
@@ -88,6 +92,12 @@ public class MessageVariableResolverFactory extends MuleBaseVariableResolverFact
                             event.setMessage(new DefaultMuleMessage(newValue, event.getMessage(), event.getMuleContext()));
                         }
                     });
+            }
+            else if (PARAM_VARS.equals(name) && event instanceof DefaultOperationMuleEvent)
+            {
+                return new MuleImmutableVariableResolver<Map<String, Object>>(PARAM_VARS, new ParamVariableMapContext
+                        ((DefaultOperationMuleEvent)event), null);
+                //TODO should we throw an exception if name == "paramVars" ?
             }
             else if (FLOW_VARS.equals(name))
             {
