@@ -266,6 +266,7 @@ public class NameUtils
      */
     public static String getTopLevelTypeName(MetadataType metadataType)
     {
+        //FIXME class => annotation
         Class<?> type = JavaTypeUtils.getType(metadataType);
         Alias alias = type.getAnnotation(Alias.class);
         String name = alias != null ? alias.value() : type.getSimpleName();

@@ -6,6 +6,8 @@
  */
 package org.mule.test.heisenberg.extension.model;
 
+import org.mule.runtime.extension.api.annotation.Extensible;
+
 public class Ricin implements Weapon
 {
 

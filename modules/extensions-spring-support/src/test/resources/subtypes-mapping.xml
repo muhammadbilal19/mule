@@ -24,15 +24,14 @@
         <subtypes:door-interface>
             <subtypes:car-door color="red"/>
         </subtypes:door-interface>
-        <subtypes:explicit-square>
-            <subtypes:square side="2" area="4"/>
-        </subtypes:explicit-square>
-        <subtypes:simple-pojo>
-            <subtypes:final-pojo someString="message"/>
-        </subtypes:simple-pojo>
-        <subtypes:imported-ricin>
-            <heisenberg:ricin microgramsPerKilo="2"/>
-        </subtypes:imported-ricin>
+        <subtypes:explicit-square side="2" area="4"/>
+        <subtypes:final-pojo someString="message"/>
+        <subtypes:ricin microgramsPerKilo="2"/>
+        <subtypes:extensible-weapon>
+            <heisenberg:ricin microgramsPerKilo="22">
+                <heisenberg:destination victim="Krazy-8" address="Jesse's"/>
+            </heisenberg:ricin>
+        </subtypes:extensible-weapon>
         <subtypes:triangle>
             <subtypes:triangle-alias height="4" area="2"/>
         </subtypes:triangle>
@@ -73,12 +72,8 @@
             <subtypes:door>
                 <subtypes:house-door isLocked="false"/>
             </subtypes:door>
-            <subtypes:final-pojo-param>
-                <subtypes:final-pojo someString="asChild"/>
-            </subtypes:final-pojo-param>
-            <subtypes:cook-book>
-                <vegan:vegan-cook-book numberOfPages="1"/>
-            </subtypes:cook-book>
+            <subtypes:final-pojo someString="asChild"/>
+            <subtypes:cook-book numberOfPages="1"/>
             <subtypes:square-shape>
                 <subtypes:square side="4" area="16"/>
             </subtypes:square-shape>
@@ -102,7 +97,7 @@
                 baseShape="global-shape"
                 squareShape="global-square"
                 triangle="global-triangle"
-                finalPojoParam="global-final-pojo"
+                finalPojo="global-final-pojo"
                 cookBook="global-cookbook"
         />
     </flow>

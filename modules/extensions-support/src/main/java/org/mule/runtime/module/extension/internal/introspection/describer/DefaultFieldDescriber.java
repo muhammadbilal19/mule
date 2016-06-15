@@ -7,6 +7,7 @@
 package org.mule.runtime.module.extension.internal.introspection.describer;
 
 import static org.mule.runtime.module.extension.internal.introspection.describer.MuleExtensionAnnotationParser.parseDisplayAnnotations;
+import static org.mule.runtime.module.extension.internal.util.IntrospectionUtils.getFieldMetadataType;
 import static org.mule.runtime.module.extension.internal.util.MuleExtensionUtils.getDefaultValue;
 import org.mule.runtime.extension.api.annotation.param.Optional;
 import org.mule.runtime.extension.api.introspection.declaration.fluent.ParameterDeclarer;
@@ -59,7 +60,8 @@ final class DefaultFieldDescriber implements FieldDescriber
 
         String parameterName = MuleExtensionAnnotationParser.getAliasName(field);
         ParameterDeclarer parameterDeclarer;
-        MetadataType dataType = IntrospectionUtils.getFieldMetadataType(field, typeLoader);
+        // TODO don't parse types N times
+        MetadataType dataType = getFieldMetadataType(field, typeLoader);
         if (optional == null)
         {
             parameterDeclarer = declarer.withRequiredParameter(parameterName);

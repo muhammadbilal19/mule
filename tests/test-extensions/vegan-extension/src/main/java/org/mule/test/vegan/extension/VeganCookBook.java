@@ -8,7 +8,7 @@ package org.mule.test.vegan.extension;
 
 import java.util.List;
 
-public class VeganCookBook
+public final class VeganCookBook
 {
     List<String> recipes;
 

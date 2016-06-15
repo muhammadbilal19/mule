@@ -180,15 +180,6 @@ public final class ParameterModelValidator implements ModelValidator
                                   getTopLevelTypeName(subTypeWithNameCollision.get()), ownerModelType, ownerName, extensionName,
                                   getType(subTypeWithNameCollision.get()).getSimpleName(), parameterModel.getName()));
         }
-
-        if (isInstantiable(getType(parameterModel.getType())) && parameterNames.contains(getTopLevelTypeName(parameterModel.getType())))
-        {
-            throw new IllegalParameterModelDefinitionException(
-                    String.format("The parameter [%s] in the %s [%s] from the extension [%s] can't have the same name as the ClassName or Alias of its declared type [%s]",
-                                  getTopLevelTypeName(parameterModel.getType()), ownerModelType, ownerName, extensionName,
-                                  getType(parameterModel.getType()).getSimpleName()));
-        }
-
     }
 
 }
