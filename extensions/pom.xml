@@ -136,17 +136,6 @@
                         <id>analyze-dependencies-for-extension</id>
                         <phase>validate</phase>
                     </execution>
-                    <execution>
-                        <id>list-dependencies</id>
-                        <goals>
-                            <goal>list</goal>
-                        </goals>
-                        <phase>process-resources</phase>
-                        <configuration>
-                            <outputFile>${project.build.testOutputDirectory}/dependencies.list</outputFile>
-                            <sort>true</sort>
-                        </configuration>
-                    </execution>
                 </executions>
             </plugin>
         </plugins>

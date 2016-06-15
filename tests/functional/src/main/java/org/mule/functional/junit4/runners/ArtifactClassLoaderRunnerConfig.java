@@ -23,11 +23,6 @@ import java.lang.annotation.Target;
 public @interface ArtifactClassLoaderRunnerConfig
 {
     /**
-     * @return the file name for getting the maven dependencies listed with maven-dependency-plugin
-     */
-    String dependenciesListFile() default "target/test-classes/dependencies.list";
-
-    /**
      * @return the file name for getting the maven dependencies graph with depgraph-maven-plugin
      */
     String dependenciesGraphFile() default "target/test-classes/dependency-graph.dot";
@@ -37,4 +32,11 @@ public @interface ArtifactClassLoaderRunnerConfig
      * container classloader, default packages are "org.junit,junit,org.hamcrest,org.mockito".
      */
     String extraBootPackages() default "org.junit,junit,org.hamcrest,org.mockito";
+
+    /**
+     * @return a comma separated list of groupId:artifactId (it does not support wildcards) that would be used
+     * in order to exclude artifacts that should be only added to the container classloader and not to the application/plugin
+     * neither test classloader. default exclusion is "org.mule,com.mulesoft"
+     */
+    String exclusions() default "org.mule,com.mulesoft";
 }

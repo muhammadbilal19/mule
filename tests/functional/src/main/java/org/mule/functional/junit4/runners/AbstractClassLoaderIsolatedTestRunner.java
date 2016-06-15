@@ -10,8 +10,14 @@ package org.mule.functional.junit4.runners;
 import org.mule.runtime.core.util.SerializationUtils;
 import org.mule.runtime.module.artifact.classloader.DisposableClassLoader;
 
+import java.io.File;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.junit.runner.Description;
 import org.junit.runner.Runner;
@@ -40,7 +46,7 @@ public abstract class AbstractClassLoaderIsolatedTestRunner extends Runner
      * @param klass
      * @throws InitializationError if the test class is malformed.
      */
-    public AbstractClassLoaderIsolatedTestRunner(Class<?> klass) throws InitializationError
+    public AbstractClassLoaderIsolatedTestRunner(final Class<?> klass) throws InitializationError
     {
         try
         {
@@ -56,13 +62,13 @@ public abstract class AbstractClassLoaderIsolatedTestRunner extends Runner
         }
     }
 
-    protected abstract ClassLoader buildArtifactClassloader(Class<?> klass) throws Exception;
+    protected abstract ClassLoader buildArtifactClassloader(final Class<?> klass) throws Exception;
 
     /**
      * @param testClass
      * @return the delegate {@link Runner} to be used or {@link JUnit4} if no one is defined.
      */
-    protected Class<? extends Runner> getDelegateRunningToOn(Class<?> testClass)
+    protected Class<? extends Runner> getDelegateRunningToOn(final Class<?> testClass)
     {
         Class<? extends Runner> runnerClass = JUnit4.class;
         ClassLoaderIsolatedTestRunnerDelegateTo annotation = testClass.getAnnotation(ClassLoaderIsolatedTestRunnerDelegateTo.class);
@@ -91,7 +97,7 @@ public abstract class AbstractClassLoaderIsolatedTestRunner extends Runner
     }
 
     @Override
-    public void run(RunNotifier notifier)
+    public void run(final RunNotifier notifier)
     {
         final ClassLoader original = Thread.currentThread().getContextClassLoader();
         try
@@ -122,5 +128,33 @@ public abstract class AbstractClassLoaderIsolatedTestRunner extends Runner
             artifactClassLoader = null;
         }
     }
+
+    /**
+     * Gets the urls from the {@code java.class.path} and {@code sun.boot.class.path} system properties
+     */
+    protected Set<URL> getFullClassPathUrls() throws MalformedURLException
+    {
+        final Set<URL> urls = new HashSet<>();
+        addUrlsFromSystemProperty(urls, "java.class.path");
+        addUrlsFromSystemProperty(urls, "sun.boot.class.path");
+
+        if (logger.isDebugEnabled())
+        {
+            StringBuilder builder = new StringBuilder("ClassPath:");
+            urls.stream().forEach(url -> builder.append("\n").append(url));
+            logger.debug(builder.toString());
+        }
+
+        return urls;
+    }
+
+    protected void addUrlsFromSystemProperty(final Collection<URL> urls, final String propertyName) throws MalformedURLException
+    {
+        for (String file : System.getProperty(propertyName).split(":"))
+        {
+            urls.add(new File(file).toURI().toURL());
+        }
+    }
+
 
 }

@@ -13,10 +13,8 @@ import com.google.common.collect.Sets;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,7 +22,6 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -42,14 +39,7 @@ import org.junit.runners.model.InitializationError;
 public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTestRunner
 {
 
-    private static final String DOT_CHARACTER = ".";
-    private static final String MAVEN_DEPENDENCIES_DELIMITER = ":";
-    private static final String MAVEN_COMPILE_SCOPE = "compile";
-    private static final String MAVEN_TEST_SCOPE = "test";
-    private static final String MAVEN_PROVIDED_SCOPE = "provided";
     private static final String TARGET_TEST_CLASSES = "/target/test-classes/";
-    private static final String TARGET_CLASSES = "/target/classes/";
-
     private static final String DEPENDENCIES_GRAPH_FILE = TARGET_TEST_CLASSES + "dependency-graph.dot";
 
     /**
@@ -58,12 +48,12 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
      * @param klass
      * @throws InitializationError if the test class is malformed.
      */
-    public ArtifactClassloaderTestRunner(Class<?> klass) throws InitializationError
+    public ArtifactClassloaderTestRunner(final Class<?> klass) throws InitializationError
     {
         super(klass);
     }
 
-    public String getDependenciesGraphFileName(Class<?> testClass)
+    public String getDependenciesGraphFileName(final Class<?> testClass)
     {
         String dependenciesListFileName = DEPENDENCIES_GRAPH_FILE;
         ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
@@ -76,7 +66,7 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         return dependenciesListFileName;
     }
 
-    public Set<String> getExtraBootPackages(Class<?> testClass)
+    public Set<String> getExtraBootPackages(final Class<?> testClass)
     {
         String extraPackages = "org.junit,junit,org.hamcrest,org.mockito";
         ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
@@ -89,8 +79,35 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         return Sets.newHashSet(extraPackages.split(","));
     }
 
+    public Set<String> getExclusionsGroupIds(final Class<?> testClass)
+    {
+        String exclusions = "org.mule,com.mulesoft";
+        ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
+
+        if (annotation != null)
+        {
+            exclusions = annotation.exclusions();
+        }
+
+        return Sets.newHashSet(exclusions.split(",")).stream().map(exclusion -> exclusion.split(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)[0]).collect(Collectors.toSet());
+    }
+
+    public Set<String> getExclusionsArtifactIds(final Class<?> testClass)
+    {
+        String exclusions = "";
+        ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
+
+        if (annotation != null)
+        {
+            exclusions = annotation.exclusions();
+        }
+
+        return Sets.newHashSet(exclusions.split(",")).stream().filter(exclusion -> exclusion.contains(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)).map(exclusion -> exclusion.split(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)[1]).collect(Collectors.toSet());
+
+    }
+
     @Override
-    protected ClassLoader buildArtifactClassloader(Class<?> klass) throws IOException, URISyntaxException
+    protected ClassLoader buildArtifactClassloader(final Class<?> klass) throws IOException, URISyntaxException
     {
         final String userDir = System.getProperty("user.dir");
         final File dependenciesGraphFile = new File(userDir, getDependenciesGraphFileName(klass));
@@ -105,46 +122,15 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         Path dependenciesPath = Paths.get(dependenciesGraphFile.toURI());
         BasicFileAttributes view = Files.getFileAttributeView(dependenciesPath, BasicFileAttributeView.class).readAttributes();
         logger.debug("Building classloader hierarchy using maven dependency graph file: '{}', created: {}, last modified: {}", dependenciesGraphFile, view.creationTime(), view.lastModifiedTime());
-        // maven-dependency-plugin adds a few extra lines to the top
-        Set<MavenArtifact> mavenDependencies = toMavenArtifacts(dependenciesGraphFile);
+        Map<MavenArtifact, Set<MavenArtifact>> allDependencies = toMavenDependenciesMap(dependenciesGraphFile);
 
-        // Provided dependencies (with dependencies) are obtained first in order to avoid including them in application classloader if needed
-        Set<MavenArtifact> providedDeps = mavenDependencies.stream().filter(artifact -> artifact.isProvidedScope()).collect(Collectors.toSet());
-        providedDeps.forEach(art -> art.removeTestDependencies());
-        //providedDeps.stream().map(art -> art.getDependencies()).collect(Collectors.toSet());
+        Set<String> exclusionsGroupIds = getExclusionsGroupIds(klass);
+        Set<String> exclusionsArtifactIds = getExclusionsArtifactIds(klass);
 
-        Set<URL> containerDependenciesProvided = new HashSet<>();
-        providedDeps.stream().forEach(artifact -> {
-            addURL(containerDependenciesProvided, artifact, urls);
-        });
+        Set<URL> appURLs = buildPluginClassLoaderURLs(urls, allDependencies, exclusionsGroupIds, exclusionsArtifactIds);
+        Set<URL> testURLs = buildApplicationClassLoaderURLs(urls, allDependencies, exclusionsGroupIds, exclusionsArtifactIds);
 
-        // Lists of urls to be used by different classloaders
-        Set<URL> appURLs = new HashSet<>();
-        Set<URL> testURLs = new HashSet<>();
-        
-        // app libraries should be all the dependencies with scope 'compile'
-        mavenDependencies.stream().filter(artifact -> artifact.isCompileScope()).forEach(artifact -> {
-            if(!providedDeps.contains(artifact))
-            {
-                addURL(appURLs, artifact, urls);
-            }
-        });
-        // test libraries should be all the dependencies with scope 'test'
-        mavenDependencies.stream().filter(artifact -> artifact.isTestScope()).forEach(artifact -> {
-            if(!providedDeps.contains(artifact))
-            {
-                addURL(testURLs, artifact, urls);
-            }
-        });
-
-        // when multi-module is used classes folders should be added as plugin classloader libraries for this artifact
-        String currentArtifactFolderName = new File(userDir).getName();
-
-        // /target-classes only for the current artifact being tested
-        urls.stream().filter(url -> url.getFile().trim().endsWith(currentArtifactFolderName + TARGET_CLASSES)).forEach(url -> appURLs.add(url));
-
-        // Tests classes should be app classloader
-        testURLs.addAll(urls.stream().filter(url -> url.getFile().trim().endsWith(currentArtifactFolderName + TARGET_TEST_CLASSES)).collect(Collectors.toList()));
+        testURLs.addAll(buildArtifactTargetClassesURL(userDir, urls));
 
         // The container contains anything that is not application either extension classloader urls
         Set<URL> containerURLs = new HashSet<>();
@@ -155,136 +141,100 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         // Container classLoader
         logClassLoaderUrls("CONTAINER", containerURLs);
         final TestContainerClassLoaderFactory testContainerClassLoaderFactory = new TestContainerClassLoaderFactory(getExtraBootPackages(klass));
-        ArtifactClassLoader containerClassLoader = testContainerClassLoaderFactory.createContainerClassLoader(new SystemContainerClassLoader(containerURLs.toArray(new URL[containerURLs.size()]), testContainerClassLoaderFactory.getBootPackages(), testContainerClassLoaderFactory.getSystemPackages()));
+        Set<String> containerExportedPackages = new HashSet<>();
+        containerExportedPackages.addAll(testContainerClassLoaderFactory.getBootPackages());
+        containerExportedPackages.addAll(testContainerClassLoaderFactory.getSystemPackages());
+        ArtifactClassLoader containerClassLoader = testContainerClassLoaderFactory.createContainerClassLoader(new SystemContainerClassLoader(containerURLs.toArray(new URL[containerURLs.size()]), containerExportedPackages));
+
+        // Plugin classLoader
+        logClassLoaderUrls("PLUGIN", appURLs);
+        MuleArtifactClassLoader pluginClassLoader = new MuleArtifactClassLoader("plugin", appURLs.toArray(new URL[appURLs.size()]), containerClassLoader.getClassLoader(), containerClassLoader.getClassLoaderLookupPolicy());
 
         // Application classLoader
-        logClassLoaderUrls("APP", appURLs);
-        MuleArtifactClassLoader pluginClassLoader = new MuleArtifactClassLoader("app", appURLs.toArray(new URL[appURLs.size()]), containerClassLoader.getClassLoader(), containerClassLoader.getClassLoaderLookupPolicy());
-
-        // Test classLoader
-        logClassLoaderUrls("TEST", testURLs);
-        return new MuleArtifactClassLoader("test", testURLs.toArray(new URL[testURLs.size()]), pluginClassLoader.getClassLoader(), pluginClassLoader.getClassLoaderLookupPolicy()).getClassLoader();
+        logClassLoaderUrls("APP", testURLs);
+        return new MuleArtifactClassLoader("app", testURLs.toArray(new URL[testURLs.size()]), pluginClassLoader.getClassLoader(), pluginClassLoader.getClassLoaderLookupPolicy()).getClassLoader();
     }
 
-    private void logClassLoaderUrls(String classLoaderName, Collection<URL> containerURLs)
+    private Set<URL> buildArtifactTargetClassesURL(String userDir, Set<URL> urls)
+    {
+        String currentArtifactFolderName = new File(userDir).getPath();
+        return urls.stream().filter(url -> url.getFile().trim().equals(currentArtifactFolderName + TARGET_TEST_CLASSES)).collect(Collectors.toSet());
+    }
+
+    private Set<URL> buildApplicationClassLoaderURLs(Set<URL> urls, Map<MavenArtifact, Set<MavenArtifact>> allDependencies, Set<String> exclusionsGroupIds, Set<String> exclusionsArtifactIds)
+    {
+        Set<URL> testURLs = new HashSet<>();
+        Set<MavenArtifact> testDeps = allDependencies.entrySet().stream().filter(e -> e.getKey().isTestScope()).map(e -> e.getKey()).collect(Collectors.toSet());
+        testDeps.addAll(allDependencies.entrySet()
+                .stream()
+                .filter(e -> testDeps.contains(e.getKey()))
+                .flatMap(p -> p.getValue().stream())
+                .filter(dep -> !exclusionsGroupIds.contains(dep.getGroupId()) && !exclusionsArtifactIds.contains(dep.getArtifactId()))
+                .collect(Collectors.toSet())
+        );
+        // just the case for current artifact that is compile scope and has test dependencies that should be added too
+        Set<MavenArtifact> compileDeps = allDependencies.entrySet().stream().filter(e -> e.getKey().isCompileScope()).map(e -> e.getKey()).collect(Collectors.toSet());
+        testDeps.addAll(allDependencies.entrySet()
+                                .stream()
+                                .filter(e -> compileDeps.contains(e.getKey()))
+                                .flatMap(p -> p.getValue().stream())
+                                .filter(dep -> dep.isTestScope())
+                                .collect(Collectors.toSet())
+        );
+        testDeps.forEach(artifact -> addURL(testURLs, artifact, urls));
+        return testURLs;
+    }
+
+    private Set<URL> buildPluginClassLoaderURLs(Set<URL> urls, Map<MavenArtifact, Set<MavenArtifact>> allDependencies, Set<String> exclusionsGroupIds, Set<String> exclusionsArtifactIds)
+    {
+        // plugin libraries should be all the dependencies with scope 'compile'
+        Set<URL> appURLs = new HashSet<>();
+        Set<MavenArtifact> appDeps = allDependencies.entrySet().stream().filter(e -> e.getKey().isCompileScope()).map(e -> e.getKey()).collect(Collectors.toSet());
+        appDeps.addAll(allDependencies.entrySet()
+                               .stream()
+                               .filter(e -> appDeps.contains(e.getKey()))
+                               .flatMap(p -> p.getValue().stream())
+                               .filter(dep -> !exclusionsGroupIds.contains(dep.getGroupId()) && !exclusionsArtifactIds.contains(dep.getArtifactId()) && !dep.isTestScope()).collect(Collectors.toSet()));
+        appDeps.forEach(artifact -> addURL(appURLs, artifact, urls));
+        return appURLs;
+    }
+
+    private void logClassLoaderUrls(final String classLoaderName, final Collection<URL> urls)
     {
         if (logger.isDebugEnabled())
         {
-            StringBuilder builder = new StringBuilder(classLoaderName).append(" classloader: [");
-            containerURLs.forEach(e -> builder.append("\n").append(e.getFile()));
+            StringBuilder builder = new StringBuilder(classLoaderName).append(" classloader urls: [");
+            urls.forEach(e -> builder.append("\n").append(" ").append(e.getFile()));
             builder.append("\n]");
             logger.debug(builder.toString());
         }
     }
 
-    private MavenArtifact fillDependencies(MavenArtifact artifact, File dependenciesGraphFile)
+    private Map<MavenArtifact, Set<MavenArtifact>> toMavenDependenciesMap(final File dependenciesGraphFile) throws IOException
     {
-        try
-        {
-            artifact.setDependencies(buildDependenciesFor(artifact, dependenciesGraphFile));
-            return artifact;
-        }
-        catch (IOException e)
-        {
-            throw new RuntimeException("Could get dependencies for artifact: " + artifact, e);
-        }
-    }
+        Map<MavenArtifact, Set<MavenArtifact>> mavenArtifactsDependencies = new HashMap<>();
 
-    private MavenArtifact fillDependencies(MavenArtifact artifact, File dependenciesGraphFile, Collection<MavenArtifact> exclusions)
-    {
-        try
-        {
-            artifact.setDependencies(buildDependenciesFor(artifact, dependenciesGraphFile).stream().filter(art -> !exclusions.contains(art)).collect(Collectors.toSet()));
-            return artifact;
-        }
-        catch (IOException e)
-        {
-            throw new RuntimeException("Could get dependencies for artifact: " + artifact, e);
-        }
-    }
+        Files.readAllLines(dependenciesGraphFile.toPath(),
+                           Charset.defaultCharset()).stream()
+                .filter(line -> line.contains("->")).forEach(line -> {
+                MavenArtifact from = parseDotDependencyArtifactFrom(line);
+                MavenArtifact to = parseDotDependencyArtifactTo(line);
+                if (!mavenArtifactsDependencies.containsKey(from)) {
+                    mavenArtifactsDependencies.put(from, new HashSet<>());
+                }
+                mavenArtifactsDependencies.get(from).add(to);
+            }
+        );
 
-    private Set<MavenArtifact> buildDependenciesFor(MavenArtifact artifact, File dependenciesGraph) throws IOException
-    {
-        return Files.readAllLines(dependenciesGraph.toPath(),
-                                  Charset.defaultCharset()).stream()
-                .filter(line -> line.contains("->") &&
-                                line.split("->")[0].contains(artifact.getGroupId() + MAVEN_DEPENDENCIES_DELIMITER + artifact.getArtifactId())).map(artifactLine -> parseDependencyMavenArtifactFromDepGraph(artifactLine)).collect(Collectors.toSet());
-    }
-    
-    /**
-     * Gets the urls from the {@code java.class.path} and {@code sun.boot.class.path} system properties
-     */
-    private Set<URL> getFullClassPathUrls() throws MalformedURLException
-    {
-        final Set<URL> urls = new HashSet<>();
-        addUrlsFromSystemProperty(urls, "java.class.path");
-        addUrlsFromSystemProperty(urls, "sun.boot.class.path");
-
-        if (logger.isDebugEnabled())
-        {
-            StringBuilder builder = new StringBuilder("ClassPath:");
-            urls.stream().forEach(url -> builder.append("\n").append(url));
-            logger.debug(builder.toString());
-        }
-
-        return urls;
-    }
-
-    private void addUrlsFromSystemProperty(Collection<URL> urls, String propertyName) throws MalformedURLException
-    {
-        for (String file : System.getProperty(propertyName).split(":"))
-        {
-            urls.add(new File(file).toURI().toURL());
-        }
-    }
-
-    private Set<MavenArtifact> toMavenArtifacts(File mavenDependenciesFile) throws IOException
-    {
-        //return Files.readAllLines(mavenDependenciesFile.toPath(),
-        //                          Charset.defaultCharset()).stream()
-        //        .filter(line -> line.length() - line.replace(MAVEN_DEPENDENCIES_DELIMITER, "").length() >= 4).map(artifactLine -> parseMavenArtifact(artifactLine.trim())).collect(Collectors.toList());
-        return Files.readAllLines(mavenDependenciesFile.toPath(),
-                                  Charset.defaultCharset()).stream()
-                .filter(line -> line.contains("->")).map(artifactLine -> fillDependencies(parseMavenArtifactFromDepGraph(artifactLine), mavenDependenciesFile)).collect(Collectors.toSet());
-    }
-
-    private static final Map<String, String> moduleMapping = new HashMap();
-
-    static
-    {
-        // Test artifacts
-        moduleMapping.put("mule-tests-functional", "/tests/functional/target/");
-        moduleMapping.put("mule-tests-unit", "/tests/unit/target/");
-        moduleMapping.put("mule-tests-infrastructure", "/tests/infrastructure/target/");
-
-        // Bootstrap artifacts
-        moduleMapping.put("mule-module-artifact", "/modules/artifact/target/");
-
-        // Modules
-        moduleMapping.put("mule-module-file", "/extensions/file");
-        moduleMapping.put("mule-module-ftp", "/extensions/ftp");
-        moduleMapping.put("mule-module-validation", "/extensions/validation");
-        moduleMapping.put("mule-core", "/core/target/classes");
-        moduleMapping.put("mule-core-tests", "/core-tests/target/classes");
-        moduleMapping.put("mule-module-extensions-spring-support", "/modules/extensions-spring-support/target/");
-        moduleMapping.put("mule-module-tls", "/modules/tls/target/");
-        moduleMapping.put("mule-module-extensions-support", "/modules/extensions-support/target/");
-        moduleMapping.put("mule-module-spring-config", "/modules/spring-config/target/");
-        moduleMapping.put("mule-module-file-extension-common", "/modules/file-extension-common/target/");
-        moduleMapping.put("mule-transport-sockets", "/transports/sockets/target/");
-        moduleMapping.put("mule-module-container", "/modules/container/target/");
-        moduleMapping.put("mule-module-launcher", "/modules/launcher/target/");
-        moduleMapping.put("mule-module-reboot", "/modules/reboot/target/");
+        return mavenArtifactsDependencies;
     }
 
     private void addURL(final Collection<URL> collection, final MavenArtifact artifact, final Collection<URL> urls)
     {
-        // Resolves the artifact from maven repository
         Optional<URL> artifactURL = urls.stream().filter(filePath -> filePath.getFile().contains(artifact.getGroupIdAsPath() + File.separator + artifact.getArtifactId() + File.separator)).findFirst();
         if (artifactURL.isPresent())
         {
             collection.add(artifactURL.get());
-            addDependenciesURL(collection, artifact, urls);
         }
         else
         {
@@ -292,89 +242,49 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         }
     }
 
-    private void addDependenciesURL(Collection<URL> collection, MavenArtifact artifact, Collection<URL> urls)
+    private void addModuleURL(final Collection<URL> collection, final MavenArtifact artifact, final Collection<URL> urls)
     {
-        // It would also include its dependencies
-        artifact.getDependencies().forEach(dependency -> addURL(collection, dependency, urls));
-    }
-
-    private void addModuleURL(Collection<URL> collection, MavenArtifact artifact, Collection<URL> urls)
-    {
-        final String urlSuffix = moduleMapping.get(artifact.artifactId);
-        if (urlSuffix == null)
+        final StringBuilder moduleFolder = new StringBuilder(MavenModuleMapping.moduleMapping.get(artifact.getArtifactId())).append("target/");
+        if (moduleFolder == null)
         {
-            throw new IllegalArgumentException("Cannot locate artifact as multi-module dependency: '" + artifact + "', mapping used is: " + moduleMapping);
+            throw new IllegalArgumentException("Cannot locate artifact as multi-module dependency: '" + artifact + "', mapping used is: " + MavenModuleMapping.moduleMapping);
         }
-        final Optional<URL> localFile = urls.stream().filter(url -> url.toString().contains(urlSuffix)).findFirst();
-        if (localFile.isPresent())
+
+        // Fix to handle when running test during an intall phase due to maven builds the classpath pointing out to packaged files instead of classes folders.
+        final StringBuilder explodedUrlSuffix = new StringBuilder();
+        final StringBuilder packagedUrlSuffix = new StringBuilder();
+        if (artifact.isTestScope() && artifact.getType().equals("test-jar"))
         {
-            collection.add(localFile.get());
-            addDependenciesURL(collection, artifact, urls);
+            explodedUrlSuffix.append("test-classes/");
+            packagedUrlSuffix.append(".*-test.jar");
         }
         else
         {
-            //throw new IllegalArgumentException("Cannot locate artifact as multi-module dependency: '" + artifact + "', mapping used is: " + urlSuffix);
+            explodedUrlSuffix.append("classes/");
+            packagedUrlSuffix.append("^(?!.*?(?:-test.jar)).*$");
         }
-    }
-
-    public static class SystemContainerClassLoader extends URLClassLoader
-    {
-        private final Set<String> bootPackages;
-        private final Set<String> systemPackages;
-
-        public SystemContainerClassLoader(URL[] urls, Set<String> bootPackages, Set<String> systemPackages)
-        {
-            super(urls, null);
-            this.bootPackages = bootPackages;
-            this.systemPackages = systemPackages;
-        }
-
-        @Override
-        public Class<?> loadClass(String name) throws ClassNotFoundException
-        {
-            Class<?> result = findLoadedClass(name);
-
-            if (result != null)
+        final Optional<URL> localFile = urls.stream().filter(url -> {
+            String path = url.toString();
+            if (path.contains(moduleFolder))
             {
-                return result;
-            }
-
-            if (isBootPackage(name) || isSystemPackage(name))
-            {
-                return getSystemClassLoader().loadClass(name);
-            }
-            else
-            {
-                throw new ClassNotFoundException(name);
-            }
-        }
-
-        private boolean isBootPackage(String name)
-        {
-            return isFromPackage(bootPackages, name);
-        }
-
-        private boolean isSystemPackage(String name)
-        {
-            return isFromPackage(systemPackages, name);
-        }
-
-        private boolean isFromPackage(Set<String> packages, String name)
-        {
-            for (String aPackage : packages)
-            {
-                if (name.startsWith(aPackage))
-                {
-                    return true;
-                }
+                String pathSuffix = path.substring(path.lastIndexOf(moduleFolder.toString()) + moduleFolder.length(), path.length());
+                return pathSuffix.matches(explodedUrlSuffix.toString());
             }
             return false;
+        }).findFirst();
+        if (localFile.isPresent())
+        {
+            collection.add(localFile.get());
+        }
+        else
+        {
+            throw new IllegalArgumentException("Cannot locate artifact as multi-module dependency: '" + artifact + "', on module folder: " + moduleFolder + " using regex: " + explodedUrlSuffix);
         }
     }
 
-    private MavenArtifact parseMavenArtifact(String mavenDependencyString)
+    private MavenArtifact parseMavenArtifact(final String mavenDependencyString)
     {
-        String[] tokens = mavenDependencyString.split(MAVEN_DEPENDENCIES_DELIMITER);
+        String[] tokens = mavenDependencyString.split(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER);
         String groupId = tokens[0];
         String artifactId = tokens[1];
         String type = tokens[2];
@@ -383,7 +293,7 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         return new MavenArtifact(groupId, artifactId, type, version, scope);
     }
 
-    private MavenArtifact parseDependencyMavenArtifactFromDepGraph(String line)
+    private MavenArtifact parseDotDependencyArtifactTo(final String line)
     {
         String artifactLine = line.split("->")[1];
         if (artifactLine.contains("["))
@@ -397,7 +307,7 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         return parseMavenArtifact(artifactLine.trim());
     }
 
-    private MavenArtifact parseMavenArtifactFromDepGraph(String line)
+    private MavenArtifact parseDotDependencyArtifactFrom(final String line)
     {
         String artifactLine = line.split("->")[0];
         if (artifactLine.contains("\""))
@@ -405,121 +315,5 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
             artifactLine = artifactLine.substring(artifactLine.indexOf("\"") + 1, artifactLine.lastIndexOf("\""));
         }
         return parseMavenArtifact(artifactLine.trim());
-    }
-
-
-    private class MavenArtifact
-    {
-        private String groupId;
-        private String artifactId;
-        private String type;
-        private String version;
-        private String scope;
-        private Set<MavenArtifact> dependencies = Collections.EMPTY_SET;
-
-        public MavenArtifact(String groupId, String artifactId, String type, String version, String scope)
-        {
-            this.groupId = groupId;
-            this.artifactId = artifactId;
-            this.type = type;
-            this.version = version;
-            this.scope = scope;
-        }
-
-        public String getGroupId()
-        {
-            return groupId;
-        }
-
-        public String getGroupIdAsPath()
-        {
-            return getGroupId().replace(DOT_CHARACTER, File.separator);
-        }
-
-        public String getArtifactId()
-        {
-            return artifactId;
-        }
-
-        public String getType()
-        {
-            return type;
-        }
-
-        public String getVersion()
-        {
-            return version;
-        }
-
-        public String getScope()
-        {
-            return scope;
-        }
-
-        public boolean isCompileScope()
-        {
-            return MAVEN_COMPILE_SCOPE.equals(scope);
-        }
-
-        public boolean isTestScope()
-        {
-            return MAVEN_TEST_SCOPE.equals(scope);
-        }
-
-        public boolean isProvidedScope()
-        {
-            return MAVEN_PROVIDED_SCOPE.equals(scope);
-        }
-
-        public void setDependencies(Set<MavenArtifact> dependencies)
-        {
-            this.dependencies = dependencies;
-        }
-
-        public Set<MavenArtifact> getDependencies()
-        {
-            return dependencies;
-        }
-
-        @Override
-        public String toString()
-        {
-            return groupId + MAVEN_DEPENDENCIES_DELIMITER + artifactId + MAVEN_DEPENDENCIES_DELIMITER + type + MAVEN_DEPENDENCIES_DELIMITER + version + MAVEN_DEPENDENCIES_DELIMITER + scope;
-        }
-
-        @Override
-        public boolean equals(Object o)
-        {
-            if (this == o)
-            {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass())
-            {
-                return false;
-            }
-
-            MavenArtifact that = (MavenArtifact) o;
-
-            if (!groupId.equals(that.groupId))
-            {
-                return false;
-            }
-            return artifactId.equals(that.artifactId);
-
-        }
-
-        @Override
-        public int hashCode()
-        {
-            int result = groupId.hashCode();
-            result = 31 * result + artifactId.hashCode();
-            return result;
-        }
-
-        public void removeTestDependencies()
-        {
-            dependencies = dependencies.stream().filter(dep -> !dep.isTestScope()).collect(Collectors.toSet());
-        }
     }
 }
