@@ -36,7 +36,14 @@ public @interface ArtifactClassLoaderRunnerConfig
     /**
      * @return a comma separated list of groupId:artifactId (it does not support wildcards) that would be used
      * in order to exclude artifacts that should be only added to the container classloader and not to the application/plugin
-     * neither test classloader. default exclusion is "org.mule,com.mulesoft"
+     * neither test classloader. Default exclusion is "org.mule,com.mulesoft"
      */
     String exclusions() default "org.mule,com.mulesoft";
+
+    /**
+     * @return flag to enable the runner to have a plugin class space (and classloader) between the application classloader
+     * and the container classloader, this will contain any compile dependency declared in the pom being tested.
+     * It is mostly used for testing extensions. Default value is false.
+     */
+    boolean usePluginClassSpace() default false;
 }

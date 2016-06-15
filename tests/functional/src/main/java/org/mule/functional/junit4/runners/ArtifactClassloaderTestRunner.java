@@ -103,7 +103,19 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         }
 
         return Sets.newHashSet(exclusions.split(",")).stream().filter(exclusion -> exclusion.contains(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)).map(exclusion -> exclusion.split(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)[1]).collect(Collectors.toSet());
+    }
 
+    public boolean isUsePluginClassSpace(final Class<?> testClass)
+    {
+        boolean usePluginClassSpace = false;
+        ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
+
+        if (annotation != null)
+        {
+            usePluginClassSpace = annotation.usePluginClassSpace();
+        }
+
+        return usePluginClassSpace;
     }
 
     @Override
@@ -127,16 +139,16 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         Set<String> exclusionsGroupIds = getExclusionsGroupIds(klass);
         Set<String> exclusionsArtifactIds = getExclusionsArtifactIds(klass);
 
-        Set<URL> appURLs = buildPluginClassLoaderURLs(urls, allDependencies, exclusionsGroupIds, exclusionsArtifactIds);
-        Set<URL> testURLs = buildApplicationClassLoaderURLs(urls, allDependencies, exclusionsGroupIds, exclusionsArtifactIds);
+        Set<URL> pluginURLs = buildPluginClassLoaderURLs(urls, allDependencies, exclusionsGroupIds, exclusionsArtifactIds);
+        Set<URL> appURLs = buildApplicationClassLoaderURLs(urls, allDependencies, exclusionsGroupIds, exclusionsArtifactIds);
 
-        testURLs.addAll(buildArtifactTargetClassesURL(userDir, urls));
+        appURLs.addAll(buildArtifactTargetClassesURL(userDir, urls));
 
         // The container contains anything that is not application either extension classloader urls
         Set<URL> containerURLs = new HashSet<>();
         containerURLs.addAll(urls);
+        containerURLs.removeAll(pluginURLs);
         containerURLs.removeAll(appURLs);
-        containerURLs.removeAll(testURLs);
 
         // Container classLoader
         logClassLoaderUrls("CONTAINER", containerURLs);
@@ -144,15 +156,22 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         Set<String> containerExportedPackages = new HashSet<>();
         containerExportedPackages.addAll(testContainerClassLoaderFactory.getBootPackages());
         containerExportedPackages.addAll(testContainerClassLoaderFactory.getSystemPackages());
-        ArtifactClassLoader containerClassLoader = testContainerClassLoaderFactory.createContainerClassLoader(new SystemContainerClassLoader(containerURLs.toArray(new URL[containerURLs.size()]), containerExportedPackages));
+        ArtifactClassLoader classLoader = testContainerClassLoaderFactory.createContainerClassLoader(new SystemContainerClassLoader(containerURLs.toArray(new URL[containerURLs.size()]), containerExportedPackages));
 
-        // Plugin classLoader
-        logClassLoaderUrls("PLUGIN", appURLs);
-        MuleArtifactClassLoader pluginClassLoader = new MuleArtifactClassLoader("plugin", appURLs.toArray(new URL[appURLs.size()]), containerClassLoader.getClassLoader(), containerClassLoader.getClassLoaderLookupPolicy());
+        if (isUsePluginClassSpace(klass))
+        {
+            // Plugin classLoader
+            logClassLoaderUrls("PLUGIN", pluginURLs);
+            classLoader = new MuleArtifactClassLoader("plugin", pluginURLs.toArray(new URL[pluginURLs.size()]), classLoader.getClassLoader(), classLoader.getClassLoaderLookupPolicy());
+        }
+        else
+        {
+            appURLs.addAll(pluginURLs);
+        }
 
         // Application classLoader
-        logClassLoaderUrls("APP", testURLs);
-        return new MuleArtifactClassLoader("app", testURLs.toArray(new URL[testURLs.size()]), pluginClassLoader.getClassLoader(), pluginClassLoader.getClassLoaderLookupPolicy()).getClassLoader();
+        logClassLoaderUrls("APP", appURLs);
+        return new MuleArtifactClassLoader("app", appURLs.toArray(new URL[appURLs.size()]), classLoader.getClassLoader(), classLoader.getClassLoaderLookupPolicy()).getClassLoader();
     }
 
     private Set<URL> buildArtifactTargetClassesURL(String userDir, Set<URL> urls)
