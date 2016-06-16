@@ -1,0 +1,38 @@
+digraph G {
+  node [shape="box",fontname="Helvetica"]
+  edge [fontname="Helvetica",fontsize="10"]
+
+  // Node Definitions:
+  "abc:x:jar::compile"[label="x"]
+  "commons-beanutils:commons-beanutils:jar::compile"[label="commons-beanutils"]
+  "commons-logging:commons-logging:jar::compile"[label="commons-logging"]
+  "com.google.guava:guava:jar::compile"[label="guava"]
+  "junit:junit:jar::test"[label="junit\n(test)"]
+  "org.hamcrest:hamcrest-core:jar::test"[label="hamcrest-core\n(test)"]
+  "org.springframework:spring-orm:jar::provided"[label="spring-orm\n(provided)"]
+  "org.springframework:spring-beans:jar::provided"[label="spring-beans\n(provided)"]
+  "org.springframework:spring-core:jar::provided"[label="spring-core\n(provided)"]
+  "commons-logging:commons-logging:jar::provided"[label="commons-logging\n(provided)"]
+  "org.springframework:spring-jdbc:jar::provided"[label="spring-jdbc\n(provided)"]
+  "org.springframework:spring-tx:jar::provided"[label="spring-tx\n(provided)"]
+
+  // Edge Definitions:
+  "abc:x:jar::compile" -> "commons-beanutils:commons-beanutils:jar::compile"
+  "commons-beanutils:commons-beanutils:jar::compile" -> "commons-logging:commons-logging:jar::compile"
+  "abc:x:jar::compile" -> "com.google.guava:guava:jar::compile"
+  "abc:x:jar::compile" -> "junit:junit:jar::test"
+  "junit:junit:jar::test" -> "org.hamcrest:hamcrest-core:jar::test"[style="dotted"]
+  "abc:x:jar::compile" -> "org.springframework:spring-orm:jar::provided"
+  "org.springframework:spring-orm:jar::provided" -> "org.springframework:spring-beans:jar::provided"
+  "org.springframework:spring-beans:jar::provided" -> "org.springframework:spring-core:jar::provided"[style="dotted"]
+  "org.springframework:spring-orm:jar::provided" -> "org.springframework:spring-core:jar::provided"
+  "org.springframework:spring-core:jar::provided" -> "commons-logging:commons-logging:jar::provided"[style="dashed",color="red",fontcolor="red"]
+  "org.springframework:spring-orm:jar::provided" -> "org.springframework:spring-jdbc:jar::provided"
+  "org.springframework:spring-jdbc:jar::provided" -> "org.springframework:spring-beans:jar::provided"[style="dotted"]
+  "org.springframework:spring-jdbc:jar::provided" -> "org.springframework:spring-core:jar::provided"[style="dotted"]
+  "org.springframework:spring-jdbc:jar::provided" -> "org.springframework:spring-tx:jar::provided"[style="dotted"]
+  "org.springframework:spring-orm:jar::provided" -> "org.springframework:spring-tx:jar::provided"
+  "org.springframework:spring-tx:jar::provided" -> "org.springframework:spring-beans:jar::provided"[style="dotted"]
+  "org.springframework:spring-tx:jar::provided" -> "org.springframework:spring-core:jar::provided"[style="dotted"]
+  "abc:x:jar::compile" -> "org.hamcrest:hamcrest-core:jar::test"
+}

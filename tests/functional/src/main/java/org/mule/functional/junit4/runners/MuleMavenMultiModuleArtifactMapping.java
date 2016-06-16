@@ -11,24 +11,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * This is just a temporary hack for accessing folders in the multi-module Mule project per artifactId.
- * TODO: find a way to get this from maven mule parent pom
+ * Mule default implementation for getting modules based on artifactIds.
+ * TODO: Find a better way to get this from the reactor-maven-plugin.
  */
-public class MavenModuleMapping
+public class MuleMavenMultiModuleArtifactMapping implements MavenMultiModuleAritfactMapping
 {
     public static final Map<String, String> moduleMapping = new HashMap();
 
     static
     {
-        // Test artifacts
         moduleMapping.put("mule-tests-functional", "/tests/functional/");
         moduleMapping.put("mule-tests-unit", "/tests/unit/");
         moduleMapping.put("mule-tests-infrastructure", "/tests/infrastructure/");
-
-        // Bootstrap artifacts
         moduleMapping.put("mule-module-artifact", "/modules/artifact/");
-
-        // Modules
         moduleMapping.put("mule-module-file", "/extensions/file/");
         moduleMapping.put("mule-module-ftp", "/extensions/ftp/");
         moduleMapping.put("mule-module-validation", "/extensions/validation/");
@@ -43,5 +38,16 @@ public class MavenModuleMapping
         moduleMapping.put("mule-module-container", "/modules/container/");
         moduleMapping.put("mule-module-launcher", "/modules/launcher/");
         moduleMapping.put("mule-module-reboot", "/modules/reboot/");
+    }
+
+    @Override
+    public String mapModuleFolderNameFor(String artifactId)
+    {
+        if (!moduleMapping.containsKey(artifactId))
+        {
+            throw new IllegalArgumentException("Cannot locate artifact as multi-module dependency: '" + artifactId + "', mapping used is: " + moduleMapping);
+        }
+
+        return moduleMapping.get(artifactId);
     }
 }

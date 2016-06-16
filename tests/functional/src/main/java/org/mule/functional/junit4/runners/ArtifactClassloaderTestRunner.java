@@ -13,17 +13,9 @@ import com.google.common.collect.Sets;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributeView;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -40,11 +32,15 @@ import org.junit.runners.model.InitializationError;
  */
 public class ArtifactClassloaderTestRunner extends RunnerDecorator
 {
-
     private static final String TARGET_TEST_CLASSES = "/target/test-classes/";
-    private static final String DEPENDENCIES_GRAPH_FILE = TARGET_TEST_CLASSES + "dependency-graph.dot";
 
     private final Runner decoratee;
+
+    private ClassPathURLsProvider classPathURLsProvider;
+    private MavenDependenciesResolver mavenDependenciesResolver;
+    private MavenMultiModuleAritfactMapping mavenMultiModuleAritfactMapping;
+
+    private final ArtifactClassLoaderRunnerConfig annotation;
 
     /**
      * Creates a Runner to run {@code klass}
@@ -54,6 +50,12 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
      */
     public ArtifactClassloaderTestRunner(final Class<?> klass) throws Exception
     {
+        annotation = klass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
+
+        classPathURLsProvider = getClassPathURLsProvider(klass);
+        mavenDependenciesResolver = getMavenDependenciesResolver(klass);
+        mavenMultiModuleAritfactMapping = getMavenMultiModuleAritfactMapping(klass);
+
         ClassLoader classLoader = buildArtifactClassloader(klass);
         decoratee = new ClassLoaderIsolatedTestRunner(classLoader, klass);
     }
@@ -64,87 +66,22 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
         return decoratee;
     }
 
-    public String getDependenciesGraphFileName(final Class<?> testClass)
+    public void setClassPathURLsProvider(ClassPathURLsProvider classPathURLsProvider)
     {
-        String dependenciesListFileName = DEPENDENCIES_GRAPH_FILE;
-        ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
-
-        if (annotation != null)
-        {
-            dependenciesListFileName = annotation.dependenciesGraphFile();
-        }
-
-        return dependenciesListFileName;
+        this.classPathURLsProvider = classPathURLsProvider;
     }
 
-    public Set<String> getExtraBootPackages(final Class<?> testClass)
+    public void setMavenDependenciesResolver(MavenDependenciesResolver mavenDependenciesResolver)
     {
-        String extraPackages = "org.junit,junit,org.hamcrest,org.mockito";
-        ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
-
-        if (annotation != null)
-        {
-            extraPackages = annotation.extraBootPackages();
-        }
-
-        return Sets.newHashSet(extraPackages.split(","));
-    }
-
-    public Set<String> getExclusionsGroupIds(final Class<?> testClass)
-    {
-        String exclusions = "org.mule,com.mulesoft";
-        ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
-
-        if (annotation != null)
-        {
-            exclusions = annotation.exclusions();
-        }
-
-        return Sets.newHashSet(exclusions.split(",")).stream().map(exclusion -> exclusion.split(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)[0]).collect(Collectors.toSet());
-    }
-
-    public Set<String> getExclusionsArtifactIds(final Class<?> testClass)
-    {
-        String exclusions = "";
-        ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
-
-        if (annotation != null)
-        {
-            exclusions = annotation.exclusions();
-        }
-
-        return Sets.newHashSet(exclusions.split(",")).stream().filter(exclusion -> exclusion.contains(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)).map(exclusion -> exclusion.split(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)[1]).collect(Collectors.toSet());
-    }
-
-    public boolean isUsePluginClassSpace(final Class<?> testClass)
-    {
-        boolean usePluginClassSpace = false;
-        ArtifactClassLoaderRunnerConfig annotation = testClass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
-
-        if (annotation != null)
-        {
-            usePluginClassSpace = annotation.usePluginClassSpace();
-        }
-
-        return usePluginClassSpace;
+        this.mavenDependenciesResolver = mavenDependenciesResolver;
     }
 
     private ClassLoader buildArtifactClassloader(final Class<?> klass) throws IOException, URISyntaxException
     {
         final String userDir = System.getProperty("user.dir");
-        final File dependenciesGraphFile = new File(userDir, getDependenciesGraphFileName(klass));
+        final Set<URL> urls = this.classPathURLsProvider.getURLs();
 
-        if (!dependenciesGraphFile.exists())
-        {
-            throw new RuntimeException(String.format("Unable to run test a '%s' was not found. Run 'mvn process-resources' to ensure this file is created before running the test", DEPENDENCIES_GRAPH_FILE));
-        }
-
-        final Set<URL> urls = getFullClassPathUrls();
-
-        Path dependenciesPath = Paths.get(dependenciesGraphFile.toURI());
-        BasicFileAttributes view = Files.getFileAttributeView(dependenciesPath, BasicFileAttributeView.class).readAttributes();
-        logger.debug("Building classloader hierarchy using maven dependency graph file: '{}', created: {}, last modified: {}", dependenciesGraphFile, view.creationTime(), view.lastModifiedTime());
-        Map<MavenArtifact, Set<MavenArtifact>> allDependencies = toMavenDependenciesMap(dependenciesGraphFile);
+        Map<MavenArtifact, Set<MavenArtifact>> allDependencies = mavenDependenciesResolver.buildDependencies(klass);
 
         Set<String> exclusionsGroupIds = getExclusionsGroupIds(klass);
         Set<String> exclusionsArtifactIds = getExclusionsArtifactIds(klass);
@@ -182,33 +119,6 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
         // Application classLoader
         logClassLoaderUrls("APP", appURLs);
         return new MuleArtifactClassLoader("app", appURLs.toArray(new URL[appURLs.size()]), classLoader.getClassLoader(), classLoader.getClassLoaderLookupPolicy()).getClassLoader();
-    }
-
-    /**
-     * Gets the urls from the {@code java.class.path} and {@code sun.boot.class.path} system properties
-     */
-    protected Set<URL> getFullClassPathUrls() throws MalformedURLException
-    {
-        final Set<URL> urls = new HashSet<>();
-        addUrlsFromSystemProperty(urls, "java.class.path");
-        addUrlsFromSystemProperty(urls, "sun.boot.class.path");
-
-        if (logger.isDebugEnabled())
-        {
-            StringBuilder builder = new StringBuilder("ClassPath:");
-            urls.stream().forEach(url -> builder.append("\n").append(url));
-            logger.debug(builder.toString());
-        }
-
-        return urls;
-    }
-
-    protected void addUrlsFromSystemProperty(final Collection<URL> urls, final String propertyName) throws MalformedURLException
-    {
-        for (String file : System.getProperty(propertyName).split(":"))
-        {
-            urls.add(new File(file).toURI().toURL());
-        }
     }
 
     private Set<URL> buildArtifactTargetClassesURL(String userDir, Set<URL> urls)
@@ -266,25 +176,6 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
         }
     }
 
-    private Map<MavenArtifact, Set<MavenArtifact>> toMavenDependenciesMap(final File dependenciesGraphFile) throws IOException
-    {
-        Map<MavenArtifact, Set<MavenArtifact>> mavenArtifactsDependencies = new HashMap<>();
-
-        Files.readAllLines(dependenciesGraphFile.toPath(),
-                           Charset.defaultCharset()).stream()
-                .filter(line -> line.contains("->")).forEach(line -> {
-                MavenArtifact from = parseDotDependencyArtifactFrom(line);
-                MavenArtifact to = parseDotDependencyArtifactTo(line);
-                if (!mavenArtifactsDependencies.containsKey(from)) {
-                    mavenArtifactsDependencies.put(from, new HashSet<>());
-                }
-                mavenArtifactsDependencies.get(from).add(to);
-            }
-        );
-
-        return mavenArtifactsDependencies;
-    }
-
     private void addURL(final Collection<URL> collection, final MavenArtifact artifact, final Collection<URL> urls)
     {
         if(artifact.getType().equals("pom")) {
@@ -305,11 +196,7 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
 
     private void addModuleURL(final Collection<URL> collection, final MavenArtifact artifact, final Collection<URL> urls)
     {
-        final StringBuilder moduleFolder = new StringBuilder(MavenModuleMapping.moduleMapping.get(artifact.getArtifactId())).append("target/");
-        if (moduleFolder == null)
-        {
-            throw new IllegalArgumentException("Cannot locate artifact as multi-module dependency: '" + artifact + "', mapping used is: " + MavenModuleMapping.moduleMapping);
-        }
+        final StringBuilder moduleFolder = new StringBuilder(mavenMultiModuleAritfactMapping.mapModuleFolderNameFor(artifact.getArtifactId())).append("target/");
 
         // Fix to handle when running test during an intall phase due to maven builds the classpath pointing out to packaged files instead of classes folders.
         final StringBuilder explodedUrlSuffix = new StringBuilder();
@@ -343,38 +230,74 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
         }
     }
 
-    private MavenArtifact parseMavenArtifact(final String mavenDependencyString)
+    private Set<String> getExtraBootPackages(final Class<?> testClass)
     {
-        String[] tokens = mavenDependencyString.split(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER);
-        String groupId = tokens[0];
-        String artifactId = tokens[1];
-        String type = tokens[2];
-        String version = tokens[3];
-        String scope = tokens[4];
-        return new MavenArtifact(groupId, artifactId, type, version, scope);
+        String extraPackages = "org.junit,junit,org.hamcrest,org.mockito";
+        if (annotation != null)
+        {
+            extraPackages = annotation.extraBootPackages();
+        }
+        return Sets.newHashSet(extraPackages.split(","));
     }
 
-    private MavenArtifact parseDotDependencyArtifactTo(final String line)
+    private Set<String> getExclusionsGroupIds(final Class<?> testClass)
     {
-        String artifactLine = line.split("->")[1];
-        if (artifactLine.contains("["))
+        String exclusions = "org.mule,com.mulesoft";
+        if (annotation != null)
         {
-            artifactLine = artifactLine.substring(0, artifactLine.indexOf("["));
+            exclusions = annotation.exclusions();
         }
-        if (artifactLine.contains("\""))
-        {
-            artifactLine = artifactLine.substring(artifactLine.indexOf("\"") + 1, artifactLine.lastIndexOf("\""));
-        }
-        return parseMavenArtifact(artifactLine.trim());
+        return Sets.newHashSet(exclusions.split(",")).stream().map(exclusion -> exclusion.split(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)[0]).collect(Collectors.toSet());
     }
 
-    private MavenArtifact parseDotDependencyArtifactFrom(final String line)
+    private Set<String> getExclusionsArtifactIds(final Class<?> testClass)
     {
-        String artifactLine = line.split("->")[0];
-        if (artifactLine.contains("\""))
+        String exclusions = "";
+        if (annotation != null)
         {
-            artifactLine = artifactLine.substring(artifactLine.indexOf("\"") + 1, artifactLine.lastIndexOf("\""));
+            exclusions = annotation.exclusions();
         }
-        return parseMavenArtifact(artifactLine.trim());
+        return Sets.newHashSet(exclusions.split(",")).stream().filter(exclusion -> exclusion.contains(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)).map(exclusion -> exclusion.split(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)[1]).collect(Collectors.toSet());
+    }
+
+    private boolean isUsePluginClassSpace(final Class<?> testClass)
+    {
+        boolean usePluginClassSpace = false;
+        if (annotation != null)
+        {
+            usePluginClassSpace = annotation.usePluginClassSpace();
+        }
+        return usePluginClassSpace;
+    }
+
+
+    public ClassPathURLsProvider getClassPathURLsProvider(final Class<?> testClass) throws IllegalAccessException, InstantiationException
+    {
+        ClassPathURLsProvider classPathURLsProvider = new DefaultClassPathURLsProvider();
+        if (annotation != null)
+        {
+            classPathURLsProvider = annotation.classPathURLsProvider().newInstance();
+        }
+        return classPathURLsProvider;
+    }
+
+    private MavenDependenciesResolver getMavenDependenciesResolver(final Class<?> testClass) throws IllegalAccessException, InstantiationException
+    {
+        MavenDependenciesResolver mavenDependenciesResolver = new DependencyGraphMavenDependenciesResolver();
+        if (annotation != null)
+        {
+            mavenDependenciesResolver = annotation.mavenDependenciesResolver().newInstance();
+        }
+        return mavenDependenciesResolver;
+    }
+
+    private MavenMultiModuleAritfactMapping getMavenMultiModuleAritfactMapping(final Class<?> testClass) throws IllegalAccessException, InstantiationException
+    {
+        MavenMultiModuleAritfactMapping mavenMultiModuleArtifactMapping = new MuleMavenMultiModuleArtifactMapping();
+        if (annotation != null)
+        {
+            mavenMultiModuleArtifactMapping = annotation.mavenMultiModuleArtifactMapping().newInstance();
+        }
+        return mavenMultiModuleArtifactMapping;
     }
 }

@@ -23,11 +23,6 @@ import java.lang.annotation.Target;
 public @interface ArtifactClassLoaderRunnerConfig
 {
     /**
-     * @return the file name for getting the maven dependencies graph with depgraph-maven-plugin
-     */
-    String dependenciesGraphFile() default "target/test-classes/dependency-graph.dot";
-
-    /**
      * @return a comma separated list of packages to be added as PARENT_ONLY for the
      * container classloader, default packages are "org.junit,junit,org.hamcrest,org.mockito".
      */
@@ -46,4 +41,22 @@ public @interface ArtifactClassLoaderRunnerConfig
      * It is mostly used for testing extensions. Default value is false.
      */
     boolean usePluginClassSpace() default false;
+
+    /**
+     * @return a class of {@link ClassPathURLsProvider} that defines the implementation to be used for the runner.
+     * If no class is defined it will use the default implementation. See {@link DefaultClassPathURLsProvider}
+     */
+    Class<? extends ClassPathURLsProvider> classPathURLsProvider() default DefaultClassPathURLsProvider.class;
+
+    /**
+     * @return a class of {@link MavenDependenciesResolver} that defines the implementation to be used for the runner.
+     * If no class is defined it will use the default implementation. See {@link DependencyGraphMavenDependenciesResolver}
+     */
+    Class<? extends MavenDependenciesResolver> mavenDependenciesResolver() default DependencyGraphMavenDependenciesResolver.class;
+
+    /**
+     * @return a class of {@link MavenMultiModuleAritfactMapping} that defines the implementation to be used for the runner.
+     * If no class is defined it will use the default implementation. See {@link MuleMavenMultiModuleArtifactMapping}
+     */
+    Class<? extends MavenMultiModuleAritfactMapping> mavenMultiModuleArtifactMapping() default MuleMavenMultiModuleArtifactMapping.class;
 }
