@@ -250,6 +250,11 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
 
     private void addURL(final Collection<URL> collection, final MavenArtifact artifact, final Collection<URL> urls)
     {
+        if(artifact.getType().equals("pom")) {
+            logger.debug("Artifact ignored and not added to classloader: " + artifact);
+            return;
+        }
+
         Optional<URL> artifactURL = urls.stream().filter(filePath -> filePath.getFile().contains(artifact.getGroupIdAsPath() + File.separator + artifact.getArtifactId() + File.separator)).findFirst();
         if (artifactURL.isPresent())
         {
@@ -275,7 +280,7 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         if (artifact.isTestScope() && artifact.getType().equals("test-jar"))
         {
             explodedUrlSuffix.append("test-classes/");
-            packagedUrlSuffix.append(".*-test.jar");
+            packagedUrlSuffix.append(".*-tests.jar");
         }
         else
         {
@@ -297,7 +302,7 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         }
         else
         {
-            throw new IllegalArgumentException("Cannot locate artifact as multi-module dependency: '" + artifact + "', on module folder: " + moduleFolder + " using regex: " + explodedUrlSuffix);
+            throw new IllegalArgumentException("Cannot locate artifact as multi-module dependency: '" + artifact + "', on module folder: " + moduleFolder + " using exploded url suffix regex: " + explodedUrlSuffix + " or " + packagedUrlSuffix);
         }
     }
 
