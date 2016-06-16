@@ -107,7 +107,6 @@
         <module>tests</module>
         <module>extensions</module>
         <module>transports</module>
-        <module>xyz</module>
     </modules>
 
     <properties>
