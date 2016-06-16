@@ -10,14 +10,8 @@ package org.mule.functional.junit4.runners;
 import org.mule.runtime.core.util.SerializationUtils;
 import org.mule.runtime.module.artifact.classloader.DisposableClassLoader;
 
-import java.io.File;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.junit.runner.Description;
 import org.junit.runner.Runner;
@@ -29,31 +23,33 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO
+ * JUnit {@link Runner} implementation that uses a classloader to load the test class and delegate runner
+ * to run the tests.
  */
-public abstract class AbstractClassLoaderIsolatedTestRunner extends Runner
+public class ClassLoaderIsolatedTestRunner extends Runner
 {
     protected final transient Logger logger = LoggerFactory.getLogger(this.getClass());
 
     protected final Object innerRunner;
     protected final Class<?> innerRunnerClass;
 
-    protected ClassLoader artifactClassLoader;
+    protected ClassLoader classLoader;
 
     /**
-     * Creates a Runner to run {@code klass}
+     * Creates a Runner to run {@code final innerklass} using the given {@link ClassLoader}
      *
+     * @param classLoader to be used for loading the test class and delegate runner
      * @param klass
      * @throws InitializationError if the test class is malformed.
      */
-    public AbstractClassLoaderIsolatedTestRunner(final Class<?> klass) throws InitializationError
+    public ClassLoaderIsolatedTestRunner(final ClassLoader classLoader, final Class<?> klass) throws InitializationError
     {
         try
         {
             logger.debug("Running with runner: '{}'", this.getClass().getName());
-            artifactClassLoader = buildArtifactClassloader(klass);
-            innerRunnerClass = artifactClassLoader.loadClass(getDelegateRunningToOn(klass).getName());
-            Class<?> testClass = artifactClassLoader.loadClass(klass.getName());
+            this.classLoader = classLoader;
+            innerRunnerClass = this.classLoader.loadClass(getDelegateRunningToOn(klass).getName());
+            Class<?> testClass = this.classLoader.loadClass(klass.getName());
             innerRunner = innerRunnerClass.cast(innerRunnerClass.getConstructor(Class.class).newInstance(testClass));
         }
         catch (Exception e)
@@ -61,8 +57,6 @@ public abstract class AbstractClassLoaderIsolatedTestRunner extends Runner
             throw new InitializationError(e);
         }
     }
-
-    protected abstract ClassLoader buildArtifactClassloader(final Class<?> klass) throws Exception;
 
     /**
      * @param testClass
@@ -102,7 +96,7 @@ public abstract class AbstractClassLoaderIsolatedTestRunner extends Runner
         final ClassLoader original = Thread.currentThread().getContextClassLoader();
         try
         {
-            Thread.currentThread().setContextClassLoader(artifactClassLoader);
+            Thread.currentThread().setContextClassLoader(classLoader);
             innerRunnerClass.getMethod("run", RunNotifier.class).invoke(innerRunner, notifier);
         }
         catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
@@ -114,47 +108,19 @@ public abstract class AbstractClassLoaderIsolatedTestRunner extends Runner
         {
             Thread.currentThread().setContextClassLoader(original);
 
-            if (artifactClassLoader instanceof DisposableClassLoader)
+            if (classLoader instanceof DisposableClassLoader)
             {
                 try
                 {
-                    ((DisposableClassLoader) artifactClassLoader).dispose();
+                    ((DisposableClassLoader) classLoader).dispose();
                 }
                 catch (Exception e)
                 {
                     // Ignore
                 }
             }
-            artifactClassLoader = null;
+            classLoader = null;
         }
     }
-
-    /**
-     * Gets the urls from the {@code java.class.path} and {@code sun.boot.class.path} system properties
-     */
-    protected Set<URL> getFullClassPathUrls() throws MalformedURLException
-    {
-        final Set<URL> urls = new HashSet<>();
-        addUrlsFromSystemProperty(urls, "java.class.path");
-        addUrlsFromSystemProperty(urls, "sun.boot.class.path");
-
-        if (logger.isDebugEnabled())
-        {
-            StringBuilder builder = new StringBuilder("ClassPath:");
-            urls.stream().forEach(url -> builder.append("\n").append(url));
-            logger.debug(builder.toString());
-        }
-
-        return urls;
-    }
-
-    protected void addUrlsFromSystemProperty(final Collection<URL> urls, final String propertyName) throws MalformedURLException
-    {
-        for (String file : System.getProperty(propertyName).split(":"))
-        {
-            urls.add(new File(file).toURI().toURL());
-        }
-    }
-
 
 }

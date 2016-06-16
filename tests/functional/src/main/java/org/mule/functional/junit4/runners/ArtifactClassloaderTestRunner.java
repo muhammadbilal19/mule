@@ -13,6 +13,7 @@ import com.google.common.collect.Sets;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -29,6 +30,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.junit.runner.Runner;
 import org.junit.runners.model.InitializationError;
 
 /**
@@ -36,11 +38,13 @@ import org.junit.runners.model.InitializationError;
  * The classloaders here created for running the test have the following hierarchy, from parent to child:
  * ContainerClassLoader (it also adds junit and org.hamcrest packages as PARENT_ONLY look up strategy)
  */
-public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTestRunner
+public class ArtifactClassloaderTestRunner extends RunnerDecorator
 {
 
     private static final String TARGET_TEST_CLASSES = "/target/test-classes/";
     private static final String DEPENDENCIES_GRAPH_FILE = TARGET_TEST_CLASSES + "dependency-graph.dot";
+
+    private final Runner decoratee;
 
     /**
      * Creates a Runner to run {@code klass}
@@ -48,9 +52,16 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
      * @param klass
      * @throws InitializationError if the test class is malformed.
      */
-    public ArtifactClassloaderTestRunner(final Class<?> klass) throws InitializationError
+    public ArtifactClassloaderTestRunner(final Class<?> klass) throws Exception
     {
-        super(klass);
+        ClassLoader classLoader = buildArtifactClassloader(klass);
+        decoratee = new ClassLoaderIsolatedTestRunner(classLoader, klass);
+    }
+
+    @Override
+    protected Runner getDecoratee()
+    {
+        return decoratee;
     }
 
     public String getDependenciesGraphFileName(final Class<?> testClass)
@@ -118,8 +129,7 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         return usePluginClassSpace;
     }
 
-    @Override
-    protected ClassLoader buildArtifactClassloader(final Class<?> klass) throws IOException, URISyntaxException
+    private ClassLoader buildArtifactClassloader(final Class<?> klass) throws IOException, URISyntaxException
     {
         final String userDir = System.getProperty("user.dir");
         final File dependenciesGraphFile = new File(userDir, getDependenciesGraphFileName(klass));
@@ -147,8 +157,12 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         // The container contains anything that is not application either extension classloader urls
         Set<URL> containerURLs = new HashSet<>();
         containerURLs.addAll(urls);
-        containerURLs.removeAll(pluginURLs);
         containerURLs.removeAll(appURLs);
+
+        if (isUsePluginClassSpace(klass))
+        {
+            containerURLs.removeAll(pluginURLs);
+        }
 
         // Container classLoader
         logClassLoaderUrls("CONTAINER", containerURLs);
@@ -164,14 +178,37 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
             logClassLoaderUrls("PLUGIN", pluginURLs);
             classLoader = new MuleArtifactClassLoader("plugin", pluginURLs.toArray(new URL[pluginURLs.size()]), classLoader.getClassLoader(), classLoader.getClassLoaderLookupPolicy());
         }
-        else
-        {
-            appURLs.addAll(pluginURLs);
-        }
 
         // Application classLoader
         logClassLoaderUrls("APP", appURLs);
         return new MuleArtifactClassLoader("app", appURLs.toArray(new URL[appURLs.size()]), classLoader.getClassLoader(), classLoader.getClassLoaderLookupPolicy()).getClassLoader();
+    }
+
+    /**
+     * Gets the urls from the {@code java.class.path} and {@code sun.boot.class.path} system properties
+     */
+    protected Set<URL> getFullClassPathUrls() throws MalformedURLException
+    {
+        final Set<URL> urls = new HashSet<>();
+        addUrlsFromSystemProperty(urls, "java.class.path");
+        addUrlsFromSystemProperty(urls, "sun.boot.class.path");
+
+        if (logger.isDebugEnabled())
+        {
+            StringBuilder builder = new StringBuilder("ClassPath:");
+            urls.stream().forEach(url -> builder.append("\n").append(url));
+            logger.debug(builder.toString());
+        }
+
+        return urls;
+    }
+
+    protected void addUrlsFromSystemProperty(final Collection<URL> urls, final String propertyName) throws MalformedURLException
+    {
+        for (String file : System.getProperty(propertyName).split(":"))
+        {
+            urls.add(new File(file).toURI().toURL());
+        }
     }
 
     private Set<URL> buildArtifactTargetClassesURL(String userDir, Set<URL> urls)
@@ -213,7 +250,7 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
                                .stream()
                                .filter(e -> appDeps.contains(e.getKey()))
                                .flatMap(p -> p.getValue().stream())
-                               .filter(dep -> !exclusionsGroupIds.contains(dep.getGroupId()) && !exclusionsArtifactIds.contains(dep.getArtifactId()) && !dep.isTestScope()).collect(Collectors.toSet()));
+                               .filter(dep -> !exclusionsGroupIds.contains(dep.getGroupId()) && !exclusionsArtifactIds.contains(dep.getArtifactId()) && dep.isCompileScope()).collect(Collectors.toSet()));
         appDeps.forEach(artifact -> addURL(appURLs, artifact, urls));
         return appURLs;
     }
@@ -285,7 +322,7 @@ public class ArtifactClassloaderTestRunner extends AbstractClassLoaderIsolatedTe
         else
         {
             explodedUrlSuffix.append("classes/");
-            packagedUrlSuffix.append("^(?!.*?(?:-test.jar)).*$");
+            packagedUrlSuffix.append("^(?!.*?(?:-tests.jar)).*.jar");
         }
         final Optional<URL> localFile = urls.stream().filter(url -> {
             String path = url.toString();

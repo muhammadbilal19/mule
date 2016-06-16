@@ -10,9 +10,9 @@ package org.mule.functional.junit4.runners;
 import org.junit.runners.model.InitializationError;
 
 /**
- * TODO: document!
+ * TODO: in-progress!
  */
-public class MuleContainerTestRunner extends AbstractClassLoaderIsolatedTestRunner
+public class MuleContainerTestRunner extends ClassLoaderIsolatedTestRunner
 {
     /**
      * Creates a Runner to run {@code klass}
@@ -21,12 +21,6 @@ public class MuleContainerTestRunner extends AbstractClassLoaderIsolatedTestRunn
      */
     public MuleContainerTestRunner(Class<?> klass) throws InitializationError
     {
-        super(klass);
-    }
-
-    @Override
-    protected ClassLoader buildArtifactClassloader(Class<?> klass)
-    {
-        return null;
+        super(MuleContainerTestRunner.class.getClassLoader(), klass);
     }
 }
