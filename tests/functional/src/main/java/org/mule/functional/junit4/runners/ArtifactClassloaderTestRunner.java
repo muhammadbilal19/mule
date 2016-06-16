@@ -52,9 +52,9 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
     {
         annotation = klass.getAnnotation(ArtifactClassLoaderRunnerConfig.class);
 
-        classPathURLsProvider = getClassPathURLsProvider(klass);
-        mavenDependenciesResolver = getMavenDependenciesResolver(klass);
-        mavenMultiModuleAritfactMapping = getMavenMultiModuleAritfactMapping(klass);
+        classPathURLsProvider = getClassPathURLsProvider();
+        mavenDependenciesResolver = getMavenDependenciesResolver();
+        mavenMultiModuleAritfactMapping = getMavenMultiModuleAritfactMapping();
 
         ClassLoader classLoader = buildArtifactClassloader(klass);
         decoratee = new ClassLoaderIsolatedTestRunner(classLoader, klass);
@@ -83,8 +83,8 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
 
         Map<MavenArtifact, Set<MavenArtifact>> allDependencies = mavenDependenciesResolver.buildDependencies(klass);
 
-        Set<String> exclusionsGroupIds = getExclusionsGroupIds(klass);
-        Set<String> exclusionsArtifactIds = getExclusionsArtifactIds(klass);
+        Set<String> exclusionsGroupIds = getExclusionsGroupIds();
+        Set<String> exclusionsArtifactIds = getExclusionsArtifactIds();
 
         Set<URL> pluginURLs = buildPluginClassLoaderURLs(urls, allDependencies, exclusionsGroupIds, exclusionsArtifactIds);
         Set<URL> appURLs = buildApplicationClassLoaderURLs(urls, allDependencies, exclusionsGroupIds, exclusionsArtifactIds);
@@ -96,20 +96,21 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
         containerURLs.addAll(urls);
         containerURLs.removeAll(appURLs);
 
-        if (isUsePluginClassSpace(klass))
+        boolean isUsingPluginClassSpace = isUsePluginClassSpace();
+        if (isUsingPluginClassSpace)
         {
             containerURLs.removeAll(pluginURLs);
         }
 
         // Container classLoader
         logClassLoaderUrls("CONTAINER", containerURLs);
-        final TestContainerClassLoaderFactory testContainerClassLoaderFactory = new TestContainerClassLoaderFactory(getExtraBootPackages(klass));
+        final TestContainerClassLoaderFactory testContainerClassLoaderFactory = new TestContainerClassLoaderFactory(getExtraBootPackages());
         Set<String> containerExportedPackages = new HashSet<>();
         containerExportedPackages.addAll(testContainerClassLoaderFactory.getBootPackages());
         containerExportedPackages.addAll(testContainerClassLoaderFactory.getSystemPackages());
         ArtifactClassLoader classLoader = testContainerClassLoaderFactory.createContainerClassLoader(new SystemContainerClassLoader(containerURLs.toArray(new URL[containerURLs.size()]), containerExportedPackages));
 
-        if (isUsePluginClassSpace(klass))
+        if (isUsingPluginClassSpace)
         {
             // Plugin classLoader
             logClassLoaderUrls("PLUGIN", pluginURLs);
@@ -230,7 +231,7 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
         }
     }
 
-    private Set<String> getExtraBootPackages(final Class<?> testClass)
+    private Set<String> getExtraBootPackages()
     {
         String extraPackages = "org.junit,junit,org.hamcrest,org.mockito";
         if (annotation != null)
@@ -240,7 +241,7 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
         return Sets.newHashSet(extraPackages.split(","));
     }
 
-    private Set<String> getExclusionsGroupIds(final Class<?> testClass)
+    private Set<String> getExclusionsGroupIds()
     {
         String exclusions = "org.mule,com.mulesoft";
         if (annotation != null)
@@ -250,7 +251,7 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
         return Sets.newHashSet(exclusions.split(",")).stream().map(exclusion -> exclusion.split(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)[0]).collect(Collectors.toSet());
     }
 
-    private Set<String> getExclusionsArtifactIds(final Class<?> testClass)
+    private Set<String> getExclusionsArtifactIds()
     {
         String exclusions = "";
         if (annotation != null)
@@ -260,7 +261,7 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
         return Sets.newHashSet(exclusions.split(",")).stream().filter(exclusion -> exclusion.contains(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)).map(exclusion -> exclusion.split(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)[1]).collect(Collectors.toSet());
     }
 
-    private boolean isUsePluginClassSpace(final Class<?> testClass)
+    private boolean isUsePluginClassSpace()
     {
         boolean usePluginClassSpace = false;
         if (annotation != null)
@@ -271,7 +272,7 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
     }
 
 
-    public ClassPathURLsProvider getClassPathURLsProvider(final Class<?> testClass) throws IllegalAccessException, InstantiationException
+    public ClassPathURLsProvider getClassPathURLsProvider() throws IllegalAccessException, InstantiationException
     {
         ClassPathURLsProvider classPathURLsProvider = new DefaultClassPathURLsProvider();
         if (annotation != null)
@@ -281,7 +282,7 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
         return classPathURLsProvider;
     }
 
-    private MavenDependenciesResolver getMavenDependenciesResolver(final Class<?> testClass) throws IllegalAccessException, InstantiationException
+    private MavenDependenciesResolver getMavenDependenciesResolver() throws IllegalAccessException, InstantiationException
     {
         MavenDependenciesResolver mavenDependenciesResolver = new DependencyGraphMavenDependenciesResolver();
         if (annotation != null)
@@ -291,7 +292,7 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
         return mavenDependenciesResolver;
     }
 
-    private MavenMultiModuleAritfactMapping getMavenMultiModuleAritfactMapping(final Class<?> testClass) throws IllegalAccessException, InstantiationException
+    private MavenMultiModuleAritfactMapping getMavenMultiModuleAritfactMapping() throws IllegalAccessException, InstantiationException
     {
         MavenMultiModuleAritfactMapping mavenMultiModuleArtifactMapping = new MuleMavenMultiModuleArtifactMapping();
         if (annotation != null)
