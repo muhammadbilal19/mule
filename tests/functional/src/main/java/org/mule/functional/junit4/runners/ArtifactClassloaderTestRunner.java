@@ -30,7 +30,7 @@ import org.junit.runners.model.InitializationError;
  * The classloaders here created for running the test have the following hierarchy, from parent to child:
  * ContainerClassLoader (it also adds junit and org.hamcrest packages as PARENT_ONLY look up strategy)
  */
-public class ArtifactClassloaderTestRunner extends RunnerDecorator
+public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
 {
     private static final String TARGET_TEST_CLASSES = "/target/test-classes/";
 
@@ -61,7 +61,7 @@ public class ArtifactClassloaderTestRunner extends RunnerDecorator
     }
 
     @Override
-    protected Runner getDecoratee()
+    protected Runner getDelegateRunner()
     {
         return decoratee;
     }

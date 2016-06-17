@@ -14,31 +14,33 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Just a JUnit {@link Runner} that delegates to a decoratee.
+ * Just a JUnit {@link Runner} that delegates to.
  */
-public abstract class RunnerDecorator extends Runner
+public abstract class AbstractRunnerDelegate extends Runner
 {
     protected final transient Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    protected abstract Runner getDecoratee();
+    protected abstract Runner getDelegateRunner();
 
     @Override
     public Description getDescription()
     {
-        if (getDecoratee() == null)
+        Runner delegate = getDelegateRunner();
+        if (delegate == null)
         {
             throw new IllegalStateException("The runner decorator has not defined a decoratee");
         }
-        return getDecoratee().getDescription();
+        return delegate.getDescription();
     }
 
     @Override
     public void run(RunNotifier notifier)
     {
-        if (getDecoratee() == null)
+        Runner delegate = getDelegateRunner();
+        if (delegate == null)
         {
             throw new IllegalStateException("The runner decorator has not defined a decoratee");
         }
-        getDecoratee().run(notifier);
+        delegate.run(notifier);
     }
 }
