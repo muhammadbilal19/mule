@@ -20,24 +20,31 @@ public class MuleMavenMultiModuleArtifactMapping implements MavenMultiModuleArit
 
     static
     {
-        moduleMapping.put("mule-tests-functional", "/tests/functional/");
-        moduleMapping.put("mule-tests-unit", "/tests/unit/");
-        moduleMapping.put("mule-tests-infrastructure", "/tests/infrastructure/");
-        moduleMapping.put("mule-module-artifact", "/modules/artifact/");
-        moduleMapping.put("mule-module-file", "/extensions/file/");
-        moduleMapping.put("mule-module-ftp", "/extensions/ftp/");
-        moduleMapping.put("mule-module-validation", "/extensions/validation/");
         moduleMapping.put("mule-core", "/core/");
         moduleMapping.put("mule-core-tests", "/core-tests/");
-        moduleMapping.put("mule-module-extensions-spring-support", "/modules/extensions-spring-support/");
-        moduleMapping.put("mule-module-tls", "/modules/tls/");
-        moduleMapping.put("mule-module-extensions-support", "/modules/extensions-support/");
-        moduleMapping.put("mule-module-spring-config", "/modules/spring-config/");
-        moduleMapping.put("mule-module-file-extension-common", "/modules/file-extension-common/");
-        moduleMapping.put("mule-transport-sockets", "/transports/sockets/");
+
+        moduleMapping.put("mule-module-file", "/extensions/file/");
+        moduleMapping.put("mule-module-ftp", "/extensions/ftp/");
+        moduleMapping.put("mule-module-http-ext", "/extensions/http/");
+        moduleMapping.put("mule-module-sockets", "/extensions/sockets/");
+        moduleMapping.put("mule-module-validation", "/extensions/validation/");
+
+        moduleMapping.put("mule-module-artifact", "/modules/artifact/");
+        moduleMapping.put("mule-module-client", "/modules/client/");
         moduleMapping.put("mule-module-container", "/modules/container/");
+        moduleMapping.put("mule-module-extensions-spring-support", "/modules/extensions-spring-support/");
+        moduleMapping.put("mule-module-extensions-support", "/modules/extensions-support/");
+        moduleMapping.put("mule-module-file-extension-common", "/modules/file-extension-common/");
+        moduleMapping.put("mule-module-spring-config", "/modules/spring-config/");
         moduleMapping.put("mule-module-launcher", "/modules/launcher/");
         moduleMapping.put("mule-module-reboot", "/modules/reboot/");
+        moduleMapping.put("mule-module-tls", "/modules/tls/");
+
+        moduleMapping.put("mule-tests-functional", "/tests/functional/");
+        moduleMapping.put("mule-tests-infrastructure", "/tests/infrastructure/");
+        moduleMapping.put("mule-tests-unit", "/tests/unit/");
+
+        moduleMapping.put("mule-transport-sockets", "/transports/sockets/");
     }
 
     @Override
