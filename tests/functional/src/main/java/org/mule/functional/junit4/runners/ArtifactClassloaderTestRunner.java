@@ -15,11 +15,13 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.junit.runner.Runner;
@@ -86,8 +88,11 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
         Set<String> exclusionsGroupIds = getExclusionsGroupIds();
         Set<String> exclusionsArtifactIds = getExclusionsArtifactIds();
 
-        Set<URL> pluginURLs = buildPluginClassLoaderURLs(urls, allDependencies, exclusionsGroupIds, exclusionsArtifactIds);
-        Set<URL> appURLs = buildApplicationClassLoaderURLs(urls, allDependencies, exclusionsGroupIds, exclusionsArtifactIds);
+        Set<URL> containerProvidedDependenciesURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isProvidedScope(), dependency -> !dependency.isTestScope());
+        Set<URL> pluginURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isCompileScope(), dependency -> !exclusionsGroupIds.contains(dependency.getGroupId()) && !exclusionsArtifactIds.contains(dependency.getArtifactId()) && dependency.isCompileScope());
+
+        Set<URL> appURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isTestScope(), dependency -> !exclusionsGroupIds.contains(dependency.getGroupId()) && !exclusionsArtifactIds.contains(dependency.getArtifactId()));
+        appURLs.addAll(buildClassLoaderURLs(urls, allDependencies, true, artifact -> artifact.isCompileScope(), dependency -> dependency.isTestScope() && !exclusionsGroupIds.contains(dependency.getGroupId()) && !exclusionsArtifactIds.contains(dependency.getArtifactId())));
 
         appURLs.addAll(buildArtifactTargetClassesURL(userDir, urls));
 
@@ -102,13 +107,16 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
             containerURLs.removeAll(pluginURLs);
         }
 
+        // After removing all the plugin and application urls we add provided dependencies urls (supports for having same dependencies as provided transitive and compile either test)
+        containerURLs.addAll(containerProvidedDependenciesURLs);
+
         // Container classLoader
         logClassLoaderUrls("CONTAINER", containerURLs);
         final TestContainerClassLoaderFactory testContainerClassLoaderFactory = new TestContainerClassLoaderFactory(getExtraBootPackages());
         Set<String> containerExportedPackages = new HashSet<>();
         containerExportedPackages.addAll(testContainerClassLoaderFactory.getBootPackages());
         containerExportedPackages.addAll(testContainerClassLoaderFactory.getSystemPackages());
-        ArtifactClassLoader classLoader = testContainerClassLoaderFactory.createContainerClassLoader(new SystemContainerClassLoader(containerURLs.toArray(new URL[containerURLs.size()]), containerExportedPackages));
+        ArtifactClassLoader classLoader = testContainerClassLoaderFactory.createContainerClassLoader(new URLClassLoader(containerURLs.toArray(new URL[containerURLs.size()])));
 
         if (isUsingPluginClassSpace)
         {
@@ -122,48 +130,43 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
         return new MuleArtifactClassLoader("app", appURLs.toArray(new URL[appURLs.size()]), classLoader.getClassLoader(), classLoader.getClassLoaderLookupPolicy()).getClassLoader();
     }
 
+    private Set<URL> buildClassLoaderURLs(Set<URL> urls, Map<MavenArtifact, Set<MavenArtifact>> allDependencies, boolean shouldAddOnlyDependencies, Predicate<MavenArtifact> predicateArtifact, Predicate<MavenArtifact> predicateDependency)
+    {
+        Set<MavenArtifact> collectedDependencies = new HashSet<>();
+        allDependencies.entrySet().stream().filter(e -> predicateArtifact.test(e.getKey())).map(e -> e.getKey()).collect(Collectors.toSet()).forEach(artifact -> {
+            if(!shouldAddOnlyDependencies)
+            {
+                collectedDependencies.add(artifact);
+            }
+            collectedDependencies.addAll(getDependencies(artifact, allDependencies, predicateDependency));
+        });
+        Set<URL> fetchedURLs = new HashSet<>();
+        collectedDependencies.forEach(artifact -> addURL(fetchedURLs, artifact, urls));
+        return fetchedURLs;
+    }
+
+    /**
+     * @param artifact
+     * @param allDependencies
+     * @return recursively gets the dependencies for the given artifact
+     */
+    private Set<MavenArtifact> getDependencies(MavenArtifact artifact, Map<MavenArtifact, Set<MavenArtifact>> allDependencies, Predicate<MavenArtifact> predicate)
+    {
+        Set<MavenArtifact> dependencies = new HashSet<>();
+        if(allDependencies.containsKey(artifact))
+        {
+            allDependencies.get(artifact).stream().filter(dependency -> predicate.test(dependency)).forEach(dependency -> {
+                dependencies.add(dependency);
+                dependencies.addAll(getDependencies(dependency, allDependencies, predicate));
+            });
+        }
+        return dependencies;
+    }
+
     private Set<URL> buildArtifactTargetClassesURL(String userDir, Set<URL> urls)
     {
         String currentArtifactFolderName = new File(userDir).getPath();
         return urls.stream().filter(url -> url.getFile().trim().equals(currentArtifactFolderName + TARGET_TEST_CLASSES)).collect(Collectors.toSet());
-    }
-
-    private Set<URL> buildApplicationClassLoaderURLs(Set<URL> urls, Map<MavenArtifact, Set<MavenArtifact>> allDependencies, Set<String> exclusionsGroupIds, Set<String> exclusionsArtifactIds)
-    {
-        Set<URL> testURLs = new HashSet<>();
-        Set<MavenArtifact> testDeps = allDependencies.entrySet().stream().filter(e -> e.getKey().isTestScope()).map(e -> e.getKey()).collect(Collectors.toSet());
-        testDeps.addAll(allDependencies.entrySet()
-                .stream()
-                .filter(e -> testDeps.contains(e.getKey()))
-                .flatMap(p -> p.getValue().stream())
-                .filter(dep -> !exclusionsGroupIds.contains(dep.getGroupId()) && !exclusionsArtifactIds.contains(dep.getArtifactId()))
-                .collect(Collectors.toSet())
-        );
-        // just the case for current artifact that is compile scope and has test dependencies that should be added too
-        Set<MavenArtifact> compileDeps = allDependencies.entrySet().stream().filter(e -> e.getKey().isCompileScope()).map(e -> e.getKey()).collect(Collectors.toSet());
-        testDeps.addAll(allDependencies.entrySet()
-                                .stream()
-                                .filter(e -> compileDeps.contains(e.getKey()))
-                                .flatMap(p -> p.getValue().stream())
-                                .filter(dep -> dep.isTestScope())
-                                .collect(Collectors.toSet())
-        );
-        testDeps.forEach(artifact -> addURL(testURLs, artifact, urls));
-        return testURLs;
-    }
-
-    private Set<URL> buildPluginClassLoaderURLs(Set<URL> urls, Map<MavenArtifact, Set<MavenArtifact>> allDependencies, Set<String> exclusionsGroupIds, Set<String> exclusionsArtifactIds)
-    {
-        // plugin libraries should be all the dependencies with scope 'compile'
-        Set<URL> appURLs = new HashSet<>();
-        Set<MavenArtifact> appDeps = allDependencies.entrySet().stream().filter(e -> e.getKey().isCompileScope()).map(e -> e.getKey()).collect(Collectors.toSet());
-        appDeps.addAll(allDependencies.entrySet()
-                               .stream()
-                               .filter(e -> appDeps.contains(e.getKey()))
-                               .flatMap(p -> p.getValue().stream())
-                               .filter(dep -> !exclusionsGroupIds.contains(dep.getGroupId()) && !exclusionsArtifactIds.contains(dep.getArtifactId()) && dep.isCompileScope()).collect(Collectors.toSet()));
-        appDeps.forEach(artifact -> addURL(appURLs, artifact, urls));
-        return appURLs;
     }
 
     private void logClassLoaderUrls(final String classLoaderName, final Collection<URL> urls)
