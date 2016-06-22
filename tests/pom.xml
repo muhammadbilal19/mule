@@ -22,7 +22,6 @@
         <module>test-extensions</module>
         <module>unit-transports</module>
         <module>functional-transports</module>
-        <module>functional-plugins</module>
     </modules>
 
     <build>

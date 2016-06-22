@@ -8,9 +8,6 @@
 package org.mule.functional.junit4.runners;
 
 import java.io.File;
-import java.util.Collections;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Object representation of a maven artifact.
@@ -29,7 +26,6 @@ public class MavenArtifact
     private String type;
     private String version;
     private String scope;
-    private Set<MavenArtifact> dependencies = Collections.EMPTY_SET;
 
     public MavenArtifact(String groupId, String artifactId, String type, String version, String scope)
     {
@@ -85,25 +81,10 @@ public class MavenArtifact
         return MAVEN_PROVIDED_SCOPE.equals(scope);
     }
 
-    public Set<MavenArtifact> getDependencies()
-    {
-        return dependencies;
-    }
-
-    public void setDependencies(Set<MavenArtifact> dependencies)
-    {
-        this.dependencies = dependencies;
-    }
-
-    public void removeTestDependencies()
-    {
-        dependencies = dependencies.stream().filter(dep -> !dep.isTestScope()).collect(Collectors.toSet());
-    }
-
     @Override
     public String toString()
     {
-        return groupId + MAVEN_DEPENDENCIES_DELIMITER + artifactId + MAVEN_DEPENDENCIES_DELIMITER + type + MAVEN_DEPENDENCIES_DELIMITER + version + MAVEN_DEPENDENCIES_DELIMITER + scope;
+        return groupId + MAVEN_DEPENDENCIES_DELIMITER + artifactId + MAVEN_DEPENDENCIES_DELIMITER + type + MAVEN_DEPENDENCIES_DELIMITER + (version != null ? version : "") + MAVEN_DEPENDENCIES_DELIMITER + (scope != null ? scope : "");
     }
 
     @Override
@@ -139,5 +120,58 @@ public class MavenArtifact
         result = 31 * result + artifactId.hashCode();
         result = 31 * result + type.hashCode();
         return result;
+    }
+
+    public static MavenArtifactBuilder builder()
+    {
+        return new MavenArtifactBuilder();
+    }
+
+    /**
+     * Builder for {@link MavenArtifact}
+     */
+    public static class MavenArtifactBuilder
+    {
+
+        private String groupId;
+        private String artifactId;
+        private String type;
+        private String version;
+        private String scope;
+
+        public MavenArtifactBuilder withGroupId(String groupId)
+        {
+            this.groupId = groupId;
+            return this;
+        }
+
+        public MavenArtifactBuilder withArtifactId(String artifactId)
+        {
+            this.artifactId = artifactId;
+            return this;
+        }
+
+        public MavenArtifactBuilder withType(String type)
+        {
+            this.type = type;
+            return this;
+        }
+
+        public MavenArtifactBuilder withVersion(String version)
+        {
+            this.version = version;
+            return this;
+        }
+
+        public MavenArtifactBuilder withScope(String scope)
+        {
+            this.scope = scope;
+            return this;
+        }
+
+        public MavenArtifact build()
+        {
+            return new MavenArtifact(groupId, artifactId, type, version, scope);
+        }
     }
 }

@@ -17,6 +17,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -29,8 +30,13 @@ import org.junit.runners.model.InitializationError;
 
 /**
  * Runner that creates a similar classloader isolation hierarchy as Mule uses on runtime.
- * The classloaders here created for running the test have the following hierarchy, from parent to child:
- * ContainerClassLoader (it also adds junit and org.hamcrest packages as PARENT_ONLY look up strategy)
+ * The classloaders created here have the following hierarchy:
+ * <ul>
+ *     <li>Container: all the provided scope dependencies plus their dependencies (if they are not test) and java</li>
+ *     <li>Plugin (optional): all the compile scope dependencies and their dependencies (only the ones with scope compile)</li>
+ *     <li>Application: all the test scope dependencies and their dependencies if they are not defined to be excluded, plus the test dependencies
+ *     from the compile scope dependencies (again if they are not excluded).</li>
+ * </ul>
  */
 public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
 {
@@ -71,15 +77,15 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
     {
         final String userDir = System.getProperty("user.dir");
         final Set<URL> urls = this.classPathURLsProvider.getURLs();
+        boolean isUsingPluginClassSpace = isUsePluginClassSpace();
 
         Map<MavenArtifact, Set<MavenArtifact>> allDependencies = mavenDependenciesResolver.buildDependencies(klass);
 
         Predicate<MavenArtifact> exclusion = getExclusionPredicate();
 
         Set<URL> containerProvidedDependenciesURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isProvidedScope(), dependency -> !dependency.isTestScope());
-        Set<URL> pluginURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isCompileScope() && !exclusion.test(artifact), dependency -> dependency.isCompileScope() && !exclusion.test(dependency));
 
-        Set<URL> appURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isTestScope() && !exclusion.test(artifact), dependency -> !exclusion.test(dependency));
+        Set<URL> appURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isTestScope(), dependency -> !exclusion.test(dependency));
         appURLs.addAll(buildClassLoaderURLs(urls, allDependencies, true, artifact -> artifact.isCompileScope() && !exclusion.test(artifact), dependency -> dependency.isTestScope() && !exclusion.test(dependency)));
 
         appURLs.addAll(buildArtifactTargetClassesURL(userDir, urls));
@@ -89,9 +95,10 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
         containerURLs.addAll(urls);
         containerURLs.removeAll(appURLs);
 
-        boolean isUsingPluginClassSpace = isUsePluginClassSpace();
+        Set<URL> pluginURLs = Collections.emptySet();
         if (isUsingPluginClassSpace)
         {
+            pluginURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isCompileScope(), dependency -> dependency.isCompileScope());
             containerURLs.removeAll(pluginURLs);
         }
 
@@ -143,8 +150,11 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
         Set<MavenArtifact> dependencies = new HashSet<>();
         if (allDependencies.containsKey(artifact))
         {
-            allDependencies.get(artifact).stream().filter(dependency -> predicate.test(dependency)).forEach(dependency -> {
-                dependencies.add(dependency);
+            allDependencies.get(artifact).stream().forEach(dependency -> {
+                if (predicate.test(dependency))
+                {
+                    dependencies.add(dependency);
+                }
                 dependencies.addAll(getDependencies(dependency, allDependencies, predicate));
             });
         }
@@ -235,7 +245,7 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
 
     private Predicate<MavenArtifact> getExclusionPredicate()
     {
-        String exclusions = "org.mule:*:*";
+        String exclusions = "org.mule*:*:*";
         if (annotation != null)
         {
             exclusions = annotation.exclusions();
@@ -256,21 +266,11 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
             }
             else
             {
-                exclusionPredicate.or(artifactExclusion);
+                exclusionPredicate = exclusionPredicate.or(artifactExclusion);
             }
         }
 
         return exclusionPredicate;
-    }
-
-    private Set<String> getExclusionsArtifactIds()
-    {
-        String exclusions = "";
-        if (annotation != null)
-        {
-            exclusions = annotation.exclusions();
-        }
-        return Sets.newHashSet(exclusions.split(",")).stream().filter(exclusion -> exclusion.contains(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)).map(exclusion -> exclusion.split(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)[1]).collect(Collectors.toSet());
     }
 
     private boolean isUsePluginClassSpace()

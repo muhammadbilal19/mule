@@ -91,18 +91,6 @@
             <groupId>org.mule</groupId>
             <artifactId>mule-core</artifactId>
             <version>${project.version}</version>
-            <exclusions>
-                <!-- Exluded in order to override this as compile dependency -->
-                <!-- Needed in order to make it work graph dependency plugin and support for classloading isolation test -->
-                <exclusion>
-                    <groupId>commons-collections</groupId>
-                    <artifactId>commons-collections</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>commons-io</groupId>
-                    <artifactId>commons-io</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <!-- Needed for SpringXmlConfigurationBuilder and TestNamespaceHandler -->
         <dependency>

@@ -28,15 +28,13 @@ import org.junit.runner.RunWith;
 @RunWith(ArtifactClassloaderTestRunner.class)
 @ArtifactClassLoaderRunnerConfig(
         mavenMultiModuleArtifactMapping = AppClassLoaderTestRunnerTest.ModuleArtifactMapping.class,
-        usePluginClassSpace = true,
-        exclusions = "com.google.guava:guava:*"
+        usePluginClassSpace = true
 )
 @DependencyGraphMavenDependenciesResolverConfig(dependenciesGraphFile = "/target/test-classes/isolation/x-project-dep-graph.dot")
 public class AppClassLoaderTestRunnerTest
 {
     private List<String> appArtifacts;
     private List<String> pluginArtifacts;
-    private List<String> containerArtifacts;
 
     @Before
     public void before()
@@ -70,7 +68,7 @@ public class AppClassLoaderTestRunnerTest
     @Test
     public void validatePluginClassLoader()
     {
-        assertThat(pluginArtifacts, containsInAnyOrder("tests:functional", "commons-logging:commons-logging", "commons-beanutils:commons-beanutils"));
+        assertThat(pluginArtifacts, containsInAnyOrder("tests:functional", "guava:guava", "commons-logging:commons-logging", "commons-beanutils:commons-beanutils"));
 
     }
 

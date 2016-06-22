@@ -11,7 +11,7 @@ import java.util.function.Predicate;
 
 /**
  * {@link Predicate} to exclude {@link MavenArtifact} based on groupId, artifactId and type.
- * It support wildcard (any) for any of GAT fields. It is not supported partial wildcard startWith, endsWith for a GAT.
+ * It support wildcard for any of GAT fields. It is also supported partial wildcard for startsWith for groupId and artifactId.
  */
 public class MavenArtifactExclusionPredicate implements Predicate<MavenArtifact>
 {
@@ -30,9 +30,9 @@ public class MavenArtifactExclusionPredicate implements Predicate<MavenArtifact>
     @Override
     public boolean test(MavenArtifact mavenArtifact)
     {
-        if (groupId.equals("*") || groupId.equals(mavenArtifact.getGroupId()))
+        if (groupId.equals("*") || groupId.equals(mavenArtifact.getGroupId()) || startsWith(groupId, mavenArtifact.getGroupId()))
         {
-            if (artifactId.equals("*") || artifactId.equals(mavenArtifact.getArtifactId()))
+            if (artifactId.equals("*") || artifactId.equals(mavenArtifact.getArtifactId()) || startsWith(artifactId, mavenArtifact.getArtifactId()))
             {
                 if (type == null)
                 {
@@ -48,5 +48,14 @@ public class MavenArtifactExclusionPredicate implements Predicate<MavenArtifact>
             }
         }
         return false;
+    }
+
+    private boolean startsWith(String pattern, String value)
+    {
+        if (!pattern.endsWith("*"))
+        {
+            return false;
+        }
+        return value.startsWith(pattern.split("\\*")[0]);
     }
 }

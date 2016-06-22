@@ -38,7 +38,7 @@ public class DefaultClassPathURLsProvider implements ClassPathURLsProvider
         if (logger.isDebugEnabled())
         {
             StringBuilder builder = new StringBuilder("ClassPath:");
-            urls.stream().forEach(url -> builder.append("\n").append(url));
+            urls.stream().forEach(url -> builder.append(File.pathSeparator).append(url));
             logger.debug(builder.toString());
         }
 
