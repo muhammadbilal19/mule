@@ -77,10 +77,10 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
         Predicate<MavenArtifact> exclusion = getExclusionPredicate();
 
         Set<URL> containerProvidedDependenciesURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isProvidedScope(), dependency -> !dependency.isTestScope());
-        Set<URL> pluginURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isCompileScope(), dependency -> dependency.isCompileScope() && !exclusion.test(dependency));//!exclusionsGroupIds.contains(dependency.getGroupId()) && !exclusionsArtifactIds.contains(dependency.getArtifactId()) && dependency.isCompileScope());
+        Set<URL> pluginURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isCompileScope() && !exclusion.test(artifact), dependency -> dependency.isCompileScope() && !exclusion.test(dependency));
 
-        Set<URL> appURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isTestScope(), dependency -> !exclusion.test(dependency));//!exclusionsGroupIds.contains(dependency.getGroupId()) && !exclusionsArtifactIds.contains(dependency.getArtifactId()));
-        appURLs.addAll(buildClassLoaderURLs(urls, allDependencies, true, artifact -> artifact.isCompileScope(), dependency -> dependency.isTestScope() && !exclusion.test(dependency)));//!exclusionsGroupIds.contains(dependency.getGroupId()) && !exclusionsArtifactIds.contains(dependency.getArtifactId())));
+        Set<URL> appURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isTestScope() && !exclusion.test(artifact), dependency -> !exclusion.test(dependency));
+        appURLs.addAll(buildClassLoaderURLs(urls, allDependencies, true, artifact -> artifact.isCompileScope() && !exclusion.test(artifact), dependency -> dependency.isTestScope() && !exclusion.test(dependency)));
 
         appURLs.addAll(buildArtifactTargetClassesURL(userDir, urls));
 

@@ -9,14 +9,14 @@ package org.mule.runtime.module.http.functional.requester;
 import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import static org.mule.runtime.module.http.api.HttpHeaders.Names.AUTHORIZATION;
 import static org.mule.runtime.module.http.api.HttpHeaders.Names.WWW_AUTHENTICATE;
+import org.mule.functional.junit4.runners.ClassLoaderIsolatedTestRunnerDelegateTo;
 
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-@RunWith(Parameterized.class)
+@ClassLoaderIsolatedTestRunnerDelegateTo(Parameterized.class)
 public class HttpRequestNtlmAuthTestCase extends AbstractNtlmTestCase
 {
 

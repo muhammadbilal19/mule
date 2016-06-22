@@ -8,6 +8,7 @@ package org.mule.runtime.module.http.functional.listener;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
+import org.mule.functional.junit4.runners.ClassLoaderIsolatedTestRunnerDelegateTo;
 import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.module.http.functional.AbstractHttpTestCase;
 import org.mule.tck.junit4.rule.DynamicPort;
@@ -20,10 +21,9 @@ import org.apache.http.client.fluent.Request;
 import org.apache.http.entity.ContentType;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-@RunWith(Parameterized.class)
+@ClassLoaderIsolatedTestRunnerDelegateTo(Parameterized.class)
 public class HttpListenerEncodingTestCase extends AbstractHttpTestCase
 {
     @Rule

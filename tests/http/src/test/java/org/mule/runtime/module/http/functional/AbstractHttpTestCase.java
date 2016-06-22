@@ -8,8 +8,14 @@ package org.mule.runtime.module.http.functional;
 
 import org.mule.extension.http.api.HttpConnector;
 import org.mule.functional.junit4.ExtensionFunctionalTestCase;
+import org.mule.functional.junit4.runners.ArtifactClassLoaderRunnerConfig;
+import org.mule.functional.junit4.runners.ArtifactClassloaderTestRunner;
 import org.mule.module.socket.api.SocketsExtension;
 
+import org.junit.runner.RunWith;
+
+@RunWith(ArtifactClassloaderTestRunner.class)
+@ArtifactClassLoaderRunnerConfig(exclusions="org.mule.tests:mule-module-http-test:jar")
 public abstract class AbstractHttpTestCase extends ExtensionFunctionalTestCase
 {
     protected static final int DEFAULT_TIMEOUT = 1000;

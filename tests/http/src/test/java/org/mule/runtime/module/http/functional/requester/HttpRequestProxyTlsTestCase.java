@@ -12,6 +12,7 @@ import static org.mule.runtime.module.http.api.HttpConstants.HttpStatus.OK;
 import static org.mule.runtime.module.http.functional.matcher.HttpMessageAttributesMatchers.hasStatusCode;
 import org.mule.extension.http.api.HttpRequestAttributes;
 import org.mule.extension.http.api.HttpResponseAttributes;
+import org.mule.functional.junit4.runners.ClassLoaderIsolatedTestRunnerDelegateTo;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.util.IOUtils;
 import org.mule.runtime.module.http.functional.AbstractHttpTestCase;
@@ -29,11 +30,10 @@ import java.util.Collection;
 
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 
-@RunWith(Parameterized.class)
+@ClassLoaderIsolatedTestRunnerDelegateTo(Parameterized.class)
 public class HttpRequestProxyTlsTestCase extends AbstractHttpTestCase
 {
 

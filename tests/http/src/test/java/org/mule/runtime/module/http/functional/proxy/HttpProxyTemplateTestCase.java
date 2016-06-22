@@ -13,16 +13,17 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertThat;
 import static org.mule.runtime.module.http.api.HttpHeaders.Names.X_FORWARDED_FOR;
-import org.mule.runtime.core.api.config.MuleProperties;
+import org.mule.functional.junit4.runners.ClassLoaderIsolatedTestRunnerDelegateTo;
 import org.mule.runtime.config.spring.util.ProcessingStrategyUtils;
+import org.mule.runtime.core.api.config.MuleProperties;
+import org.mule.runtime.core.util.IOUtils;
+import org.mule.runtime.core.util.concurrent.Latch;
 import org.mule.runtime.module.http.api.HttpHeaders;
 import org.mule.runtime.module.http.functional.TestInputStream;
 import org.mule.runtime.module.http.functional.requester.AbstractHttpRequestTestCase;
 import org.mule.tck.SensingNullRequestResponseMessageProcessor;
 import org.mule.tck.junit4.rule.DynamicPort;
 import org.mule.tck.junit4.rule.SystemProperty;
-import org.mule.runtime.core.util.IOUtils;
-import org.mule.runtime.core.util.concurrent.Latch;
 
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
@@ -48,10 +49,9 @@ import org.apache.http.entity.ContentType;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-@RunWith(Parameterized.class)
+@ClassLoaderIsolatedTestRunnerDelegateTo(Parameterized.class)
 public class HttpProxyTemplateTestCase extends AbstractHttpRequestTestCase
 {
 

@@ -11,6 +11,10 @@
     <packaging>jar</packaging>
     <name>Mule HTTP Module Integration Tests</name>
 
+    <properties>
+        <depgraph.maven.plugin.version>1.0.4</depgraph.maven.plugin.version>
+    </properties>
+
     <build>
         <plugins>
             <plugin>
@@ -21,6 +25,26 @@
                         <goals>
                             <goal>test-jar</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>com.github.ferstl</groupId>
+                <artifactId>depgraph-maven-plugin</artifactId>
+                <version>${depgraph.maven.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>depgraph-dependencies-graph</id>
+                        <goals>
+                            <goal>graph</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                        <configuration>
+                            <showDuplicates>true</showDuplicates>
+                            <showConflicts>true</showConflicts>
+                            <outputFile>${project.build.testOutputDirectory}/dependency-graph.dot</outputFile>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -87,6 +111,7 @@
             <artifactId>mule-core-tests</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mule.modules</groupId>

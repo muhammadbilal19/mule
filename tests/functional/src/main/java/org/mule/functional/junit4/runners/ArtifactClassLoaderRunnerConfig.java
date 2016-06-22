@@ -30,8 +30,8 @@ public @interface ArtifactClassLoaderRunnerConfig
     String extraBootPackages() default "org.junit,junit,org.hamcrest,org.mockito";
 
     /**
-     * @return a comma separated list of groupId:artifactId (it does support wildcards org.mule:* or *:mule-core but
-     * not something like org.mule*:*) that would be used in order to exclude artifacts that should be only added to
+     * @return a comma separated list of groupId:artifactId:type (it does support wildcards org.mule:*:* or *:mule-core:* but
+     * not something like org.mule*:*:*) that would be used in order to exclude artifacts that should be only added to
      * the container classloader and not to the application/plugin neither test classloader.
      * Default exclusion is "org.mule:*:*"
      */
