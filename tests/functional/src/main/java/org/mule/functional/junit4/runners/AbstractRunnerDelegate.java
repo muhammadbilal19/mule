@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class AbstractRunnerDelegate extends Runner
 {
+
     protected final transient Logger logger = LoggerFactory.getLogger(this.getClass());
 
     protected abstract Runner getDelegateRunner();

@@ -34,15 +34,14 @@ import org.junit.runners.model.InitializationError;
  */
 public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
 {
+
     private static final String TARGET_TEST_CLASSES = "/target/test-classes/";
 
     private final Runner decoratee;
-
+    private final ArtifactClassLoaderRunnerConfig annotation;
     private ClassPathURLsProvider classPathURLsProvider;
     private MavenDependenciesResolver mavenDependenciesResolver;
     private MavenMultiModuleAritfactMapping mavenMultiModuleAritfactMapping;
-
-    private final ArtifactClassLoaderRunnerConfig annotation;
 
     /**
      * Creates a Runner to run {@code klass}
@@ -68,16 +67,6 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
         return decoratee;
     }
 
-    public void setClassPathURLsProvider(ClassPathURLsProvider classPathURLsProvider)
-    {
-        this.classPathURLsProvider = classPathURLsProvider;
-    }
-
-    public void setMavenDependenciesResolver(MavenDependenciesResolver mavenDependenciesResolver)
-    {
-        this.mavenDependenciesResolver = mavenDependenciesResolver;
-    }
-
     private ClassLoader buildArtifactClassloader(final Class<?> klass) throws IOException, URISyntaxException
     {
         final String userDir = System.getProperty("user.dir");
@@ -85,14 +74,13 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
 
         Map<MavenArtifact, Set<MavenArtifact>> allDependencies = mavenDependenciesResolver.buildDependencies(klass);
 
-        Set<String> exclusionsGroupIds = getExclusionsGroupIds();
-        Set<String> exclusionsArtifactIds = getExclusionsArtifactIds();
+        Predicate<MavenArtifact> exclusion = getExclusionPredicate();
 
         Set<URL> containerProvidedDependenciesURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isProvidedScope(), dependency -> !dependency.isTestScope());
-        Set<URL> pluginURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isCompileScope(), dependency -> !exclusionsGroupIds.contains(dependency.getGroupId()) && !exclusionsArtifactIds.contains(dependency.getArtifactId()) && dependency.isCompileScope());
+        Set<URL> pluginURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isCompileScope(), dependency -> dependency.isCompileScope() && !exclusion.test(dependency));//!exclusionsGroupIds.contains(dependency.getGroupId()) && !exclusionsArtifactIds.contains(dependency.getArtifactId()) && dependency.isCompileScope());
 
-        Set<URL> appURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isTestScope(), dependency -> !exclusionsGroupIds.contains(dependency.getGroupId()) && !exclusionsArtifactIds.contains(dependency.getArtifactId()));
-        appURLs.addAll(buildClassLoaderURLs(urls, allDependencies, true, artifact -> artifact.isCompileScope(), dependency -> dependency.isTestScope() && !exclusionsGroupIds.contains(dependency.getGroupId()) && !exclusionsArtifactIds.contains(dependency.getArtifactId())));
+        Set<URL> appURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isTestScope(), dependency -> !exclusion.test(dependency));//!exclusionsGroupIds.contains(dependency.getGroupId()) && !exclusionsArtifactIds.contains(dependency.getArtifactId()));
+        appURLs.addAll(buildClassLoaderURLs(urls, allDependencies, true, artifact -> artifact.isCompileScope(), dependency -> dependency.isTestScope() && !exclusion.test(dependency)));//!exclusionsGroupIds.contains(dependency.getGroupId()) && !exclusionsArtifactIds.contains(dependency.getArtifactId())));
 
         appURLs.addAll(buildArtifactTargetClassesURL(userDir, urls));
 
@@ -134,7 +122,7 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
     {
         Set<MavenArtifact> collectedDependencies = new HashSet<>();
         allDependencies.entrySet().stream().filter(e -> predicateArtifact.test(e.getKey())).map(e -> e.getKey()).collect(Collectors.toSet()).forEach(artifact -> {
-            if(!shouldAddOnlyDependencies)
+            if (!shouldAddOnlyDependencies)
             {
                 collectedDependencies.add(artifact);
             }
@@ -153,7 +141,7 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
     private Set<MavenArtifact> getDependencies(MavenArtifact artifact, Map<MavenArtifact, Set<MavenArtifact>> allDependencies, Predicate<MavenArtifact> predicate)
     {
         Set<MavenArtifact> dependencies = new HashSet<>();
-        if(allDependencies.containsKey(artifact))
+        if (allDependencies.containsKey(artifact))
         {
             allDependencies.get(artifact).stream().filter(dependency -> predicate.test(dependency)).forEach(dependency -> {
                 dependencies.add(dependency);
@@ -182,7 +170,8 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
 
     private void addURL(final Collection<URL> collection, final MavenArtifact artifact, final Collection<URL> urls)
     {
-        if(artifact.getType().equals("pom")) {
+        if (artifact.getType().equals("pom"))
+        {
             logger.debug("Artifact ignored and not added to classloader: " + artifact);
             return;
         }
@@ -244,14 +233,34 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
         return Sets.newHashSet(extraPackages.split(","));
     }
 
-    private Set<String> getExclusionsGroupIds()
+    private Predicate<MavenArtifact> getExclusionPredicate()
     {
-        String exclusions = "org.mule,com.mulesoft";
+        String exclusions = "org.mule:*:*";
         if (annotation != null)
         {
             exclusions = annotation.exclusions();
         }
-        return Sets.newHashSet(exclusions.split(",")).stream().map(exclusion -> exclusion.split(MavenArtifact.MAVEN_DEPENDENCIES_DELIMITER)[0]).collect(Collectors.toSet());
+
+        Predicate<MavenArtifact> exclusionPredicate = null;
+        for (String exclusion : exclusions.split(","))
+        {
+            String[] exclusionSplit = exclusion.split(":");
+            if (exclusionSplit.length != 3)
+            {
+                throw new IllegalArgumentException("Exclusion pattern should be a GAT format, groupId:artifactId:type");
+            }
+            Predicate<MavenArtifact> artifactExclusion = new MavenArtifactExclusionPredicate(exclusionSplit[0], exclusionSplit[1], exclusionSplit[2]);
+            if (exclusionPredicate == null)
+            {
+                exclusionPredicate = artifactExclusion;
+            }
+            else
+            {
+                exclusionPredicate.or(artifactExclusion);
+            }
+        }
+
+        return exclusionPredicate;
     }
 
     private Set<String> getExclusionsArtifactIds()
@@ -274,7 +283,6 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
         return usePluginClassSpace;
     }
 
-
     public ClassPathURLsProvider getClassPathURLsProvider() throws IllegalAccessException, InstantiationException
     {
         ClassPathURLsProvider classPathURLsProvider = new DefaultClassPathURLsProvider();
@@ -285,6 +293,11 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
         return classPathURLsProvider;
     }
 
+    public void setClassPathURLsProvider(ClassPathURLsProvider classPathURLsProvider)
+    {
+        this.classPathURLsProvider = classPathURLsProvider;
+    }
+
     private MavenDependenciesResolver getMavenDependenciesResolver() throws IllegalAccessException, InstantiationException
     {
         MavenDependenciesResolver mavenDependenciesResolver = new DependencyGraphMavenDependenciesResolver();
@@ -293,6 +306,11 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
             mavenDependenciesResolver = annotation.mavenDependenciesResolver().newInstance();
         }
         return mavenDependenciesResolver;
+    }
+
+    public void setMavenDependenciesResolver(MavenDependenciesResolver mavenDependenciesResolver)
+    {
+        this.mavenDependenciesResolver = mavenDependenciesResolver;
     }
 
     private MavenMultiModuleAritfactMapping getMavenMultiModuleAritfactMapping() throws IllegalAccessException, InstantiationException

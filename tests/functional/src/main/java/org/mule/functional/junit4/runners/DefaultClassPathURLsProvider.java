@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DefaultClassPathURLsProvider implements ClassPathURLsProvider
 {
+
     protected final transient Logger logger = LoggerFactory.getLogger(this.getClass());
 
     /**

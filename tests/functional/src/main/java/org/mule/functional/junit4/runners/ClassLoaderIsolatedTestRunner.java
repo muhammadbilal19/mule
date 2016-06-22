@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ClassLoaderIsolatedTestRunner extends Runner
 {
+
     protected final transient Logger logger = LoggerFactory.getLogger(this.getClass());
 
     protected final Object innerRunner;

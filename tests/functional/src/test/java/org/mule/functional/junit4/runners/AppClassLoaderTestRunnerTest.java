@@ -14,11 +14,11 @@ import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import org.mule.runtime.module.artifact.classloader.ArtifactClassLoader;
 
 import java.io.File;
-import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -26,28 +26,52 @@ import org.junit.runner.RunWith;
  * Test for validating logic for building the different classloaders.
  */
 @RunWith(ArtifactClassloaderTestRunner.class)
-@ArtifactClassLoaderRunnerConfig(mavenMultiModuleArtifactMapping = AppClassLoaderTestRunnerTest.ModuleArtifactMapping.class)
+@ArtifactClassLoaderRunnerConfig(
+        mavenMultiModuleArtifactMapping = AppClassLoaderTestRunnerTest.ModuleArtifactMapping.class,
+        usePluginClassSpace = true,
+        exclusions = "com.google.guava:guava:*"
+)
 @DependencyGraphMavenDependenciesResolverConfig(dependenciesGraphFile = "/target/test-classes/isolation/x-project-dep-graph.dot")
 public class AppClassLoaderTestRunnerTest
 {
-    @Test
-    public void validateAppClassloader() {
+    private List<String> appArtifacts;
+    private List<String> pluginArtifacts;
+    private List<String> containerArtifacts;
+
+    @Before
+    public void before()
+    {
         assertThat(Thread.currentThread().getContextClassLoader(), instanceOf(ArtifactClassLoader.class));
         ClassLoader classLoader = this.getClass().getClassLoader();
         assertThat(classLoader, instanceOf(ArtifactClassLoader.class));
         assertThat(classLoader, instanceOf(URLClassLoader.class));
 
         URLClassLoader urlClassLoader = (URLClassLoader) classLoader;
-        URL[] urls = urlClassLoader.getURLs();
+        appArtifacts = getArtifacts(urlClassLoader);
+        pluginArtifacts = getArtifacts((URLClassLoader) urlClassLoader.getParent());
+    }
 
-        List<String> appArtifacts = stream(urls).map(url ->
-           {
-               File artifactId = new File(url.getFile()).getParentFile().getParentFile();
-               File groupId = artifactId.getParentFile();
-               return groupId.getName() + ":" + artifactId.getName();
-           }).collect(Collectors.toList());
+    private List<String> getArtifacts(URLClassLoader urlClassLoader)
+    {
+        return stream(urlClassLoader.getURLs()).map(url ->
+                                             {
+                                                 File artifactId = new File(url.getFile()).getParentFile().getParentFile();
+                                                 File groupId = artifactId.getParentFile();
+                                                 return groupId.getName() + ":" + artifactId.getName();
+                                             }).collect(Collectors.toList());
+    }
 
-        assertThat(appArtifacts, containsInAnyOrder("junit:junit", "tests:functional", "hamcrest:hamcrest-core"));
+    @Test
+    public void validateAppClassloader()
+    {
+        assertThat(appArtifacts, containsInAnyOrder("tests:functional", "junit:junit", "hamcrest:hamcrest-core"));
+    }
+
+    @Test
+    public void validatePluginClassLoader()
+    {
+        assertThat(pluginArtifacts, containsInAnyOrder("tests:functional", "commons-logging:commons-logging", "commons-beanutils:commons-beanutils"));
+
     }
 
     public static class ModuleArtifactMapping implements MavenMultiModuleAritfactMapping

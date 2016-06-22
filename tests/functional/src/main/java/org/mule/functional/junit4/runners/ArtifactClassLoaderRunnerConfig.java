@@ -22,6 +22,7 @@ import java.lang.annotation.Target;
 @Inherited
 public @interface ArtifactClassLoaderRunnerConfig
 {
+
     /**
      * @return a comma separated list of packages to be added as PARENT_ONLY for the
      * container classloader, default packages are "org.junit,junit,org.hamcrest,org.mockito".
@@ -29,11 +30,12 @@ public @interface ArtifactClassLoaderRunnerConfig
     String extraBootPackages() default "org.junit,junit,org.hamcrest,org.mockito";
 
     /**
-     * @return a comma separated list of groupId:artifactId (it does not support wildcards) that would be used
-     * in order to exclude artifacts that should be only added to the container classloader and not to the application/plugin
-     * neither test classloader. Default exclusion is "org.mule,com.mulesoft"
+     * @return a comma separated list of groupId:artifactId (it does support wildcards org.mule:* or *:mule-core but
+     * not something like org.mule*:*) that would be used in order to exclude artifacts that should be only added to
+     * the container classloader and not to the application/plugin neither test classloader.
+     * Default exclusion is "org.mule:*:*"
      */
-    String exclusions() default "org.mule,com.mulesoft";
+    String exclusions() default "org.mule:*:*";
 
     /**
      * @return flag to enable the runner to have a plugin class space (and classloader) between the application classloader

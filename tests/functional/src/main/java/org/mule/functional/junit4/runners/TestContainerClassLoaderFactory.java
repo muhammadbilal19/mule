@@ -20,6 +20,7 @@ import java.util.Set;
  */
 public class TestContainerClassLoaderFactory extends ContainerClassLoaderFactory
 {
+
     private Set<String> extraBootPackages;
 
     public TestContainerClassLoaderFactory(Set<String> extraBootPackages)

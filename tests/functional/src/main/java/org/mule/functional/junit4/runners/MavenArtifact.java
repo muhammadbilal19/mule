@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
  */
 public class MavenArtifact
 {
+
     public static final String DOT_CHARACTER = ".";
     public static final String MAVEN_COMPILE_SCOPE = "compile";
     public static final String MAVEN_TEST_SCOPE = "test";
@@ -84,14 +85,14 @@ public class MavenArtifact
         return MAVEN_PROVIDED_SCOPE.equals(scope);
     }
 
-    public void setDependencies(Set<MavenArtifact> dependencies)
-    {
-        this.dependencies = dependencies;
-    }
-
     public Set<MavenArtifact> getDependencies()
     {
         return dependencies;
+    }
+
+    public void setDependencies(Set<MavenArtifact> dependencies)
+    {
+        this.dependencies = dependencies;
     }
 
     public void removeTestDependencies()

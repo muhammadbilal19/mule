@@ -13,6 +13,7 @@ package org.mule.functional.junit4.runners;
  */
 public interface MavenMultiModuleAritfactMapping
 {
+
     /**
      * @param artifactId
      * @return the relative folder path for the given artifactId.

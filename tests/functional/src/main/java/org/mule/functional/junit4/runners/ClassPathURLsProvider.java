@@ -15,5 +15,6 @@ import java.util.Set;
  */
 public interface ClassPathURLsProvider
 {
+
     Set<URL> getURLs();
 }

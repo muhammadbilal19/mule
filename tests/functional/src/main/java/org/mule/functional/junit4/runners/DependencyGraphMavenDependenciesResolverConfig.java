@@ -21,6 +21,7 @@ import java.lang.annotation.Target;
 @Inherited
 public @interface DependencyGraphMavenDependenciesResolverConfig
 {
+
     /**
      * @return the file name for getting the maven dependencies graph with depgraph-maven-plugin
      */

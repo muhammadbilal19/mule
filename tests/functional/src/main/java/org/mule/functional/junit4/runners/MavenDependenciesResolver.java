@@ -15,6 +15,7 @@ import java.util.Set;
  */
 public interface MavenDependenciesResolver
 {
+
     /**
      * @param testClass
      * @return based on the testClass it would generate the dependencies for the maven artifact that the class belongs to.

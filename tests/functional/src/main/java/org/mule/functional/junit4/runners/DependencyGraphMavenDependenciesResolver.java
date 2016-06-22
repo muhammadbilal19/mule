@@ -31,10 +31,10 @@ import org.slf4j.LoggerFactory;
  */
 public class DependencyGraphMavenDependenciesResolver implements MavenDependenciesResolver
 {
-    protected final transient Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private static final String DEPENDENCIES_GRAPH_ARROW = "->";
     private static final String DEPENDENCIES_GRAPH_FILE = "/target/test-classes/dependency-graph.dot";
+    protected final transient Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override
     public Map<MavenArtifact, Set<MavenArtifact>> buildDependencies(Class<?> testClass)

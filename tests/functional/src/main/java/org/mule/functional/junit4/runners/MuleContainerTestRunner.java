@@ -14,8 +14,10 @@ import org.junit.runners.model.InitializationError;
  */
 public class MuleContainerTestRunner extends ClassLoaderIsolatedTestRunner
 {
+
     /**
      * Creates a Runner to run {@code klass}
+     *
      * @param klass
      * @throws InitializationError if the test class is malformed.
      */

@@ -16,6 +16,7 @@ import java.util.Map;
  */
 public class MuleMavenMultiModuleArtifactMapping implements MavenMultiModuleAritfactMapping
 {
+
     public static final Map<String, String> moduleMapping = new HashMap();
 
     static
