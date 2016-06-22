@@ -36,7 +36,7 @@ public @interface ArtifactClassLoaderRunnerConfig
      * artifacts that are declared as test scope but it will be used for filtering its dependencies.
      * Default exclusion is "org.mule*:*:*"
      */
-    String exclusions() default "org.mule*:*:*";
+    String appExclusions() default "org.mule*:*:*";
 
     /**
      * @return flag to enable the runner to have a plugin class space (and classloader) between the application classloader

@@ -43,7 +43,7 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
 
     private static final String TARGET_TEST_CLASSES = "/target/test-classes/";
 
-    private final Runner decoratee;
+    private final Runner delegate;
     private final ArtifactClassLoaderRunnerConfig annotation;
     private ClassPathURLsProvider classPathURLsProvider;
     private MavenDependenciesResolver mavenDependenciesResolver;
@@ -64,13 +64,13 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
         mavenMultiModuleAritfactMapping = getMavenMultiModuleAritfactMapping();
 
         ClassLoader classLoader = buildArtifactClassloader(klass);
-        decoratee = new ClassLoaderIsolatedTestRunner(classLoader, klass);
+        delegate = new ClassLoaderIsolatedTestRunner(classLoader, klass);
     }
 
     @Override
     protected Runner getDelegateRunner()
     {
-        return decoratee;
+        return delegate;
     }
 
     private ClassLoader buildArtifactClassloader(final Class<?> klass) throws IOException, URISyntaxException
@@ -81,12 +81,11 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
 
         Map<MavenArtifact, Set<MavenArtifact>> allDependencies = mavenDependenciesResolver.buildDependencies(klass);
 
-        Predicate<MavenArtifact> exclusion = getExclusionPredicate();
-
         Set<URL> containerProvidedDependenciesURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isProvidedScope(), dependency -> !dependency.isTestScope());
 
-        Set<URL> appURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isTestScope(), dependency -> !exclusion.test(dependency));
-        appURLs.addAll(buildClassLoaderURLs(urls, allDependencies, true, artifact -> artifact.isCompileScope() && !exclusion.test(artifact), dependency -> dependency.isTestScope() && !exclusion.test(dependency)));
+        Predicate<MavenArtifact> appExclusion = getAppExclusionPredicate();
+        Set<URL> appURLs = buildClassLoaderURLs(urls, allDependencies, false, artifact -> artifact.isTestScope(), dependency -> !appExclusion.test(dependency));
+        appURLs.addAll(buildClassLoaderURLs(urls, allDependencies, true, artifact -> artifact.isCompileScope() && !appExclusion.test(artifact), dependency -> dependency.isTestScope() && !appExclusion.test(dependency)));
 
         appURLs.addAll(buildArtifactTargetClassesURL(userDir, urls));
 
@@ -243,12 +242,12 @@ public class ArtifactClassloaderTestRunner extends AbstractRunnerDelegate
         return Sets.newHashSet(extraPackages.split(","));
     }
 
-    private Predicate<MavenArtifact> getExclusionPredicate()
+    private Predicate<MavenArtifact> getAppExclusionPredicate()
     {
         String exclusions = "org.mule*:*:*";
         if (annotation != null)
         {
-            exclusions = annotation.exclusions();
+            exclusions = annotation.appExclusions();
         }
 
         Predicate<MavenArtifact> exclusionPredicate = null;

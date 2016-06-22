@@ -16,5 +16,8 @@ import java.util.Set;
 public interface ClassPathURLsProvider
 {
 
+    /**
+     * @return a {@link Set} of the classpath {@link URL}
+     */
     Set<URL> getURLs();
 }

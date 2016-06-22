@@ -15,7 +15,7 @@ import org.mule.module.socket.api.SocketsExtension;
 import org.junit.runner.RunWith;
 
 @RunWith(ArtifactClassloaderTestRunner.class)
-@ArtifactClassLoaderRunnerConfig(exclusions="org.mule*:*:*,org.mule.tests:mule-module-http-test:jar")
+@ArtifactClassLoaderRunnerConfig(appExclusions ="org.mule*:*:*,org.mule.tests:mule-module-http-test:jar")
 public abstract class AbstractHttpTestCase extends ExtensionFunctionalTestCase
 {
     protected static final int DEFAULT_TIMEOUT = 1000;

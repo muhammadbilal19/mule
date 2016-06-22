@@ -26,22 +26,22 @@ public abstract class AbstractRunnerDelegate extends Runner
     @Override
     public Description getDescription()
     {
-        Runner delegate = getDelegateRunner();
-        if (delegate == null)
-        {
-            throw new IllegalStateException("The runner decorator has not defined a decoratee");
-        }
-        return delegate.getDescription();
+        return doGetDelegate().getDescription();
     }
 
     @Override
     public void run(RunNotifier notifier)
     {
+        doGetDelegate().run(notifier);
+    }
+
+    private Runner doGetDelegate()
+    {
         Runner delegate = getDelegateRunner();
         if (delegate == null)
         {
-            throw new IllegalStateException("The runner decorator has not defined a decoratee");
+            throw new IllegalStateException("The runner has not defined a delegate");
         }
-        delegate.run(notifier);
+        return delegate;
     }
 }
