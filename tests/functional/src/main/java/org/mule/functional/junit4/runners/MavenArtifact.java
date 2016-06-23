@@ -109,7 +109,15 @@ public class MavenArtifact
         {
             return false;
         }
-        return type.equals(that.type);
+        if (!type.equals(that.type))
+        {
+            return false;
+        }
+        if (version != null ? !version.equals(that.version) : that.version != null)
+        {
+            return false;
+        }
+        return scope.equals(that.scope);
 
     }
 
@@ -119,6 +127,8 @@ public class MavenArtifact
         int result = groupId.hashCode();
         result = 31 * result + artifactId.hashCode();
         result = 31 * result + type.hashCode();
+        result = 31 * result + (version != null ? version.hashCode() : 0);
+        result = 31 * result + scope.hashCode();
         return result;
     }
 
