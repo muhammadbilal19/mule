@@ -6,11 +6,10 @@
  */
 package org.mule.runtime.module.http.functional.listener;
 
-import org.mule.functional.junit4.runners.ClassLoaderIsolatedTestRunnerDelegateTo;
-
+import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-@ClassLoaderIsolatedTestRunnerDelegateTo(Parameterized.class)
+@RunWith(Parameterized.class)
 public class HttpListenerExpectHeaderStreamingAlwaysTestCase extends HttpListenerExpectHeaderStreamingNeverTestCase
 {
 

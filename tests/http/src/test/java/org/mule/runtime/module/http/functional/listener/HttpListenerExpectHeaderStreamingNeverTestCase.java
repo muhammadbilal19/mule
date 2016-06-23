@@ -15,7 +15,6 @@ import static org.mule.runtime.module.http.api.HttpHeaders.Names.CONTENT_LENGTH;
 import static org.mule.runtime.module.http.api.HttpHeaders.Names.EXPECT;
 import static org.mule.runtime.module.http.api.HttpHeaders.Names.HOST;
 import static org.mule.runtime.module.http.api.HttpHeaders.Values.CONTINUE;
-import org.mule.functional.junit4.runners.ClassLoaderIsolatedTestRunnerDelegateTo;
 import org.mule.runtime.core.util.IOUtils;
 import org.mule.runtime.module.http.functional.AbstractHttpTestCase;
 import org.mule.tck.junit4.rule.DynamicPort;
@@ -35,9 +34,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-@ClassLoaderIsolatedTestRunnerDelegateTo(Parameterized.class)
+@RunWith(Parameterized.class)
 public class HttpListenerExpectHeaderStreamingNeverTestCase extends AbstractHttpTestCase
 {
 

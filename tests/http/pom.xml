@@ -24,16 +24,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>com.github.ferstl</groupId>
-                <artifactId>depgraph-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>depgraph-dependencies-graph</id>
-                        <phase>process-resources</phase>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
     </build>
 
@@ -97,7 +87,6 @@
             <artifactId>mule-core-tests</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mule.modules</groupId>

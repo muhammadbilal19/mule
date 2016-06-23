@@ -14,7 +14,6 @@ import static org.mule.runtime.module.extension.internal.util.ExtensionsTestUtil
 import org.mule.extension.http.api.request.HttpRequesterProvider;
 import org.mule.extension.http.api.request.proxy.NtlmProxyConfig;
 import org.mule.extension.http.api.request.proxy.ProxyConfig;
-import org.mule.functional.junit4.runners.ClassLoaderIsolatedTestRunnerDelegateTo;
 import org.mule.runtime.core.api.MessagingException;
 import org.mule.runtime.core.internal.connection.ConnectionProviderWrapper;
 import org.mule.runtime.core.util.concurrent.Latch;
@@ -31,11 +30,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
-@ClassLoaderIsolatedTestRunnerDelegateTo(Parameterized.class)
+@RunWith(Parameterized.class)
 public class HttpRequestProxyConfigTestCase extends AbstractHttpTestCase
 {
 

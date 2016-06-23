@@ -11,7 +11,6 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.internal.matchers.ThrowableMessageMatcher.hasMessage;
-import org.mule.functional.junit4.runners.ClassLoaderIsolatedTestRunnerDelegateTo;
 import org.mule.runtime.core.api.MessagingException;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.module.http.functional.AbstractHttpTestCase;
@@ -24,6 +23,7 @@ import java.util.Collection;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 /**
@@ -32,7 +32,7 @@ import org.junit.runners.Parameterized;
  * but with an invalid SAN extension, the other will return a certificate that's not in the trust-store.
  * Verifies that only the insecure client is successful.
  */
-@ClassLoaderIsolatedTestRunnerDelegateTo(Parameterized.class)
+@RunWith(Parameterized.class)
 public class HttpRequestTlsInsecureTestCase extends AbstractHttpTestCase
 {
     @Parameterized.Parameter
