@@ -46,7 +46,7 @@ public class MuleClassPathClassifier implements ClassPathClassifier
         appURLs.addAll(buildClassLoaderURLs(mavenMultiModuleMapping, classPathURLs, allDependencies, true, artifact -> artifact.isCompileScope() && !appExclusion.test(artifact), dependency -> dependency.isTestScope() && !appExclusion.test(dependency)));
         appURLs.addAll(buildArtifactTargetClassesURL(userDir, classPathURLs));
 
-        classSpaceBuilder.withSpace(appURLs.toArray(new URL[appURLs.size()]));
+        classSpaceBuilder.withSpace(appURLs.toArray(new URL[appURLs.size()]), new URL[0]);
 
         // The container contains anything that is not application either extension classloader urls
         Set<URL> containerURLs = new HashSet<>();
@@ -58,14 +58,14 @@ public class MuleClassPathClassifier implements ClassPathClassifier
             Set<URL> pluginURLs = buildClassLoaderURLs(mavenMultiModuleMapping, classPathURLs, allDependencies, false, artifact -> artifact.isCompileScope(), dependency -> dependency.isCompileScope());
             containerURLs.removeAll(pluginURLs);
 
-            classSpaceBuilder.withSpace(pluginURLs.toArray(new URL[pluginURLs.size()]));
+            classSpaceBuilder.withSpace(pluginURLs.toArray(new URL[pluginURLs.size()]), new URL[0]);
         }
 
         // After removing all the plugin and application urls we add provided dependencies urls (supports for having same dependencies as provided transitive and compile either test)
         Set<URL> containerProvidedDependenciesURLs = buildClassLoaderURLs(mavenMultiModuleMapping, classPathURLs, allDependencies, false, artifact -> artifact.isProvidedScope(), dependency -> !dependency.isTestScope());
         containerURLs.addAll(containerProvidedDependenciesURLs);
 
-        classSpaceBuilder.withSpace(containerURLs.toArray(new URL[containerURLs.size()]));
+        classSpaceBuilder.withSpace(containerURLs.toArray(new URL[containerURLs.size()]), new URL[0]);
 
         return classSpaceBuilder.build();
     }

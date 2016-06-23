@@ -22,6 +22,11 @@ public interface ClassSpace
     URL[] getURLs();
 
     /**
+     * @return list of URLs that define the resources of this space.
+     */
+    URL[] getResources();
+
+    /**
      * @return a child (can be null) for building a hierarchical {@link ClassSpace}
      */
     ClassSpace getChild();

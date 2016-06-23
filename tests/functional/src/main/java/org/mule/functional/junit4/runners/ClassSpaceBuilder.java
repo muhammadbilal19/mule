@@ -8,44 +8,34 @@
 package org.mule.functional.junit4.runners;
 
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ListIterator;
 
 /**
  * Builder for a {@link ClassSpace}
  */
 public final class ClassSpaceBuilder
 {
-    private List<URL[]> urls = new ArrayList<>();
+    private ClassSpace classSpace = null;
 
     public static final ClassSpaceBuilder builder()
     {
         return new ClassSpaceBuilder();
     }
 
-    public final ClassSpaceBuilder withSpace(URL[] urls)
+    public final ClassSpaceBuilder withSpace(URL[] urls, URL[] resources)
     {
-        this.urls.add(urls);
+        if(this.classSpace == null)
+        {
+            this.classSpace = new DefaultClassSpace(urls, resources, null);
+        }
+        else
+        {
+            classSpace = new DefaultClassSpace(urls, resources, classSpace);
+        }
         return this;
     }
 
     public final ClassSpace build()
     {
-        ClassSpace classSpace = null;
-        ListIterator<URL[]> listIterator = urls.listIterator();
-        while(listIterator.hasNext())
-        {
-            URL[] urls = listIterator.next();
-            if (classSpace == null)
-            {
-                classSpace = new DefaultClassSpace(urls, null);
-            }
-            else
-            {
-                classSpace = new DefaultClassSpace(urls, classSpace);
-            }
-        }
         return classSpace;
     }
 }

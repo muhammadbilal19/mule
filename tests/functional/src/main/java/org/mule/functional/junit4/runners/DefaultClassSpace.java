@@ -16,11 +16,13 @@ import java.net.URL;
 public final class DefaultClassSpace implements ClassSpace
 {
     private final URL[] urls;
+    private final URL[] resources;
     private final ClassSpace childSpace;
 
-    public DefaultClassSpace(URL[] urls, ClassSpace childSpace)
+    public DefaultClassSpace(final URL[] urls, final URL[] resources, final ClassSpace childSpace)
     {
         this.urls = urls;
+        this.resources = resources;
         this.childSpace = childSpace;
     }
 
@@ -28,6 +30,12 @@ public final class DefaultClassSpace implements ClassSpace
     public URL[] getURLs()
     {
         return urls;
+    }
+
+    @Override
+    public URL[] getResources()
+    {
+        return resources;
     }
 
     @Override
