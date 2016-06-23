@@ -11,7 +11,7 @@ package org.mule.functional.junit4.runners;
  * Defines the multi-module folder name for an artifactId. It is useful when the convention of using the same artifactId
  * as folder name for the module. This will allow to have different names.
  */
-public interface MavenMultiModuleAritfactMapping
+public interface MavenMultiModuleArtifactMapping
 {
 
     /**

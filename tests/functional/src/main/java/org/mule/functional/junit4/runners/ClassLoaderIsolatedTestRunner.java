@@ -66,7 +66,7 @@ public class ClassLoaderIsolatedTestRunner extends Runner
     protected Class<? extends Runner> getDelegateRunningToOn(final Class<?> testClass)
     {
         Class<? extends Runner> runnerClass = JUnit4.class;
-        ClassLoaderIsolatedTestRunnerDelegateTo annotation = testClass.getAnnotation(ClassLoaderIsolatedTestRunnerDelegateTo.class);
+        RunnerDelegateTo annotation = testClass.getAnnotation(RunnerDelegateTo.class);
 
         if (annotation != null)
         {

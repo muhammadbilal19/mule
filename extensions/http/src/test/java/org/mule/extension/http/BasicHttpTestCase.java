@@ -14,8 +14,8 @@ import static org.junit.Assert.assertThat;
 import org.mule.extension.http.api.HttpConnector;
 import org.mule.extension.http.api.HttpRequestAttributes;
 import org.mule.functional.junit4.ExtensionFunctionalTestCase;
-import org.mule.functional.junit4.runners.ArtifactClassLoaderRunnerConfig;
 import org.mule.functional.junit4.runners.ArtifactClassloaderTestRunner;
+import org.mule.functional.junit4.runners.MuleClassPathClassifierConfig;
 import org.mule.runtime.api.message.MuleMessage;
 import org.mule.runtime.api.message.NullPayload;
 import org.mule.runtime.core.api.MuleEvent;
@@ -49,7 +49,7 @@ import org.junit.runner.RunWith;
 
 //TODO: MULE-9702 Remove once the tests are migrated.
 @RunWith(ArtifactClassloaderTestRunner.class)
-@ArtifactClassLoaderRunnerConfig(usePluginClassSpace = true)
+@MuleClassPathClassifierConfig(usePluginClassSpace = true)
 public class BasicHttpTestCase extends ExtensionFunctionalTestCase
 {
     @Rule

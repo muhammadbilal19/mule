@@ -13,20 +13,18 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.junit.runner.Runner;
-import org.junit.runners.JUnit4;
-
 /**
- * Specifies the {@link Runner} that {@link ClassLoaderIsolatedTestRunner} delegates to.
+ * Defines the configuration used for {@link MuleClassLoaderRunnerFactory} when creating the {@link ClassLoader} to
+ * be used when running the test.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Inherited
-public @interface ClassLoaderIsolatedTestRunnerDelegateTo
+public @interface MuleRunnerConfig
 {
-
     /**
-     * @return the {@link Runner} that would be used to delegate the execution of the test.
+     * @return a comma separated list of packages to be added as PARENT_ONLY for the
+     * container classloader, default packages are "org.junit,junit,org.hamcrest,org.mockito".
      */
-    Class<? extends Runner> value() default JUnit4.class;
+    String extraBootPackages() default "org.junit,junit,org.hamcrest,org.mockito";
 }

@@ -27,9 +27,9 @@ import org.junit.runner.RunWith;
  */
 @RunWith(ArtifactClassloaderTestRunner.class)
 @ArtifactClassLoaderRunnerConfig(
-        mavenMultiModuleArtifactMapping = AppClassLoaderTestRunnerTest.ModuleArtifactMapping.class,
-        usePluginClassSpace = true
+        mavenMultiModuleArtifactMapping = AppClassLoaderTestRunnerTest.ModuleArtifactMapping.class
 )
+@MuleClassPathClassifierConfig(usePluginClassSpace = true)
 @DependencyGraphMavenDependenciesResolverConfig(dependenciesGraphFile = "/target/test-classes/isolation/x-project-dep-graph.dot")
 public class AppClassLoaderTestRunnerTest
 {
@@ -72,7 +72,7 @@ public class AppClassLoaderTestRunnerTest
 
     }
 
-    public static class ModuleArtifactMapping implements MavenMultiModuleAritfactMapping
+    public static class ModuleArtifactMapping implements MavenMultiModuleArtifactMapping
     {
         @Override
         public String mapModuleFolderNameFor(String artifactId)

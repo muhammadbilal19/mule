@@ -14,7 +14,7 @@ import java.util.Map;
  * Mule default implementation for getting modules based on artifactIds.
  * TODO: Find a better way to get this from the reactor-maven-plugin.
  */
-public class MuleMavenMultiModuleArtifactMapping implements MavenMultiModuleAritfactMapping
+public class MuleMavenMultiModuleArtifactMapping implements MavenMultiModuleArtifactMapping
 {
 
     public static final Map<String, String> moduleMapping = new HashMap();

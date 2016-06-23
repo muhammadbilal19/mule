@@ -11,8 +11,8 @@ import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertThat;
 import org.mule.functional.junit4.ExtensionFunctionalTestCase;
-import org.mule.functional.junit4.runners.ArtifactClassLoaderRunnerConfig;
 import org.mule.functional.junit4.runners.ArtifactClassloaderTestRunner;
+import org.mule.functional.junit4.runners.MuleClassPathClassifierConfig;
 import org.mule.module.socket.api.SocketsExtension;
 import org.mule.module.socket.api.TcpClientSocketProperties;
 import org.mule.module.socket.api.TcpServerSocketProperties;
@@ -21,7 +21,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(ArtifactClassloaderTestRunner.class)
-@ArtifactClassLoaderRunnerConfig(usePluginClassSpace = true)
+@MuleClassPathClassifierConfig(usePluginClassSpace = true)
 public class SocketsNamespaceHandlerTestCase extends ExtensionFunctionalTestCase
 {
 
