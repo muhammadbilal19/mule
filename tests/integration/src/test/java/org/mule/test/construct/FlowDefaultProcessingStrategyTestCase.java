@@ -10,8 +10,7 @@ import static java.lang.Thread.currentThread;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
-
-import org.mule.functional.junit4.FunctionalTestCase;
+import org.mule.functional.junit4.ArtifactFunctionalTestCase;
 import org.mule.functional.junit4.TransactionConfigEnum;
 import org.mule.runtime.core.MessageExchangePattern;
 import org.mule.runtime.core.api.MuleEvent;
@@ -22,7 +21,7 @@ import org.mule.tck.testmodels.mule.TestTransactionFactory;
 
 import org.junit.Test;
 
-public class FlowDefaultProcessingStrategyTestCase extends FunctionalTestCase
+public class FlowDefaultProcessingStrategyTestCase extends ArtifactFunctionalTestCase
 {
 
     protected static final String PROCESSOR_THREAD = "processor-thread";

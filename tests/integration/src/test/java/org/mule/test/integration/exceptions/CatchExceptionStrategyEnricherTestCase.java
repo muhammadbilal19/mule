@@ -9,16 +9,15 @@ package org.mule.test.integration.exceptions;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
-
+import org.mule.functional.junit4.ArtifactFunctionalTestCase;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleException;
 import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.core.api.processor.MessageProcessor;
-import org.mule.functional.junit4.FunctionalTestCase;
 
 import org.junit.Test;
 
-public class CatchExceptionStrategyEnricherTestCase extends FunctionalTestCase
+public class CatchExceptionStrategyEnricherTestCase extends ArtifactFunctionalTestCase
 {
     public static class ErrorProcessor implements MessageProcessor
     {

@@ -9,7 +9,7 @@ package org.mule.test.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
+import org.mule.functional.junit4.ArtifactFunctionalTestCase;
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleEventContext;
@@ -17,9 +17,8 @@ import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.core.api.MutableMuleMessage;
 import org.mule.runtime.core.api.lifecycle.Callable;
 import org.mule.runtime.core.api.transformer.TransformerException;
-import org.mule.functional.junit4.FunctionalTestCase;
-import org.mule.tck.testmodels.fruit.Apple;
 import org.mule.runtime.core.transformer.AbstractMessageTransformer;
+import org.mule.tck.testmodels.fruit.Apple;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,7 +32,7 @@ import javax.activation.DataSource;
 
 import org.junit.Test;
 
-public class EventMetaDataPropagationTestCase extends FunctionalTestCase
+public class EventMetaDataPropagationTestCase extends ArtifactFunctionalTestCase
 {
 
     @Override

@@ -36,9 +36,11 @@ public class MuleObjectStoreManager
     implements ObjectStoreManager, MuleContextAware, Initialisable, Disposable
 {
     private static Logger logger = LoggerFactory.getLogger(MuleObjectStoreManager.class);
-    protected ScheduledThreadPoolExecutor scheduler;
+    //TODO(pablo.kraan): isolation - needed to make this filed public to compile tests after moving to a different package
+    public ScheduledThreadPoolExecutor scheduler;
     MuleContext muleContext;
-    ConcurrentMap<String, ObjectStore<?>> stores = new ConcurrentHashMap<String, ObjectStore<?>>();
+    //TODO(pablo.kraan): isolation - needed to make this filed public to compile tests after moving to a different package
+    public ConcurrentMap<String, ObjectStore<?>> stores = new ConcurrentHashMap<String, ObjectStore<?>>();
     private final ConcurrentMap<String, ScheduledFuture<?>> monitors = new ConcurrentHashMap<>();
     private String baseTransientStoreKey = MuleProperties.OBJECT_STORE_DEFAULT_IN_MEMORY_NAME;
     private String basePersistentStoreKey = MuleProperties.OBJECT_STORE_DEFAULT_PERSISTENT_NAME;

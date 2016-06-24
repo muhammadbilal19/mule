@@ -7,12 +7,12 @@
 package org.mule.test.construct;
 
 import static org.junit.Assert.assertEquals;
+import org.mule.functional.junit4.ArtifactFunctionalTestCase;
 import org.mule.runtime.core.api.MuleEvent;
-import org.mule.functional.junit4.FunctionalTestCase;
 
 import org.junit.Test;
 
-public class FilterInSubFlowTestCase extends FunctionalTestCase
+public class FilterInSubFlowTestCase extends ArtifactFunctionalTestCase
 {
     @Override
     protected String getConfigFile()
