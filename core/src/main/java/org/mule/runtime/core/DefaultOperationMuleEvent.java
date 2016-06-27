@@ -8,8 +8,7 @@ package org.mule.runtime.core;
 
 import org.mule.runtime.api.metadata.DataType;
 import org.mule.runtime.core.api.MuleEvent;
-import org.mule.runtime.core.transformer.types.DataTypeFactory;
-import org.mule.runtime.core.transformer.types.TypedValue;
+import org.mule.runtime.core.metadata.TypedValue;
 import org.mule.runtime.core.util.CopyOnWriteCaseInsensitiveMap;
 
 import java.util.Set;
@@ -59,7 +58,7 @@ public class DefaultOperationMuleEvent extends DefaultMuleEvent
 
     public void setParamVariable(String key, Object value)
     {
-        setParamVariable(key, value, DataTypeFactory.createFromObject(value));
+        setParamVariable(key, value, DataType.fromObject(value));
     }
 
     public void setParamVariable(String key, Object value, DataType dataType)

@@ -11,7 +11,7 @@ import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.context.MuleContextAware;
 import org.mule.runtime.core.api.lifecycle.Initialisable;
 import org.mule.runtime.core.api.lifecycle.InitialisationException;
-import org.mule.runtime.core.transformer.types.TypedValue;
+import org.mule.runtime.core.metadata.TypedValue;
 import org.mule.runtime.core.util.AttributeEvaluator;
 
 public class OperationParameter implements MuleContextAware, Initialisable

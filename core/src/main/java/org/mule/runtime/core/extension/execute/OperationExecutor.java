@@ -7,6 +7,7 @@
 package org.mule.runtime.core.extension.execute;
 
 
+import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.DefaultOperationMuleEvent;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.MuleEvent;
@@ -19,7 +20,7 @@ import org.mule.runtime.core.api.processor.MessageProcessor;
 import org.mule.runtime.core.extension.define.ModuleOperation;
 import org.mule.runtime.core.extension.define.OperationChain;
 import org.mule.runtime.core.extension.define.OperationParameter;
-import org.mule.runtime.core.transformer.types.TypedValue;
+import org.mule.runtime.core.metadata.TypedValue;
 
 import java.util.Collections;
 import java.util.List;
@@ -46,7 +47,7 @@ public class OperationExecutor implements MessageProcessor, Initialisable, MuleC
         MuleEvent defaultOperationMuleEvent = createOperationMuleEvent(event);
         MuleEvent processResult = getOperationChain().process(defaultOperationMuleEvent);
         MuleMessage messageResult = processResult.getMessage();
-        event.getMessage().setPayload(messageResult.getPayload(), messageResult.getDataType());
+        event.setMessage(new DefaultMuleMessage(messageResult));
         return event;
     }
 
