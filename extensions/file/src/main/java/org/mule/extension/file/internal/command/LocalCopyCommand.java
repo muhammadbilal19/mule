@@ -6,7 +6,6 @@
  */
 package org.mule.extension.file.internal.command;
 
-import org.mule.extension.file.api.FileConnector;
 import org.mule.extension.file.api.LocalFileSystem;
 import org.mule.runtime.api.message.MuleEvent;
 import org.mule.runtime.core.util.FileUtils;
@@ -27,9 +26,9 @@ public final class LocalCopyCommand extends AbstractLocalCopyCommand implements 
     /**
      * {@inheritDoc}
      */
-    public LocalCopyCommand(LocalFileSystem fileSystem, FileConnector config)
+    public LocalCopyCommand(LocalFileSystem fileSystem)
     {
-        super(fileSystem, config);
+        super(fileSystem);
     }
 
     /**

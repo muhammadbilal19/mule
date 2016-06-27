@@ -7,7 +7,6 @@
 package org.mule.extension.ftp.internal.ftp.command;
 
 import static java.lang.String.format;
-import org.mule.extension.ftp.api.FtpConnector;
 import org.mule.extension.ftp.internal.ftp.ClassicFtpFileAttributes;
 import org.mule.extension.ftp.internal.ftp.connection.ClassicFtpFileSystem;
 import org.mule.runtime.module.extension.file.api.FileAttributes;
@@ -30,9 +29,9 @@ public final class FtpDeleteCommand extends ClassicFtpCommand implements DeleteC
     /**
      * {@inheritDoc}
      */
-    public FtpDeleteCommand(ClassicFtpFileSystem fileSystem, FtpConnector config, FTPClient client)
+    public FtpDeleteCommand(ClassicFtpFileSystem fileSystem, FTPClient client)
     {
-        super(fileSystem, config, client);
+        super(fileSystem, client);
     }
 
     /**

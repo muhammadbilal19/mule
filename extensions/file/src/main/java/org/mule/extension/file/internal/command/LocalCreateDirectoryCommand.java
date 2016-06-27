@@ -27,9 +27,9 @@ public final class LocalCreateDirectoryCommand extends LocalFileCommand implemen
     /**
      * {@inheritDoc}
      */
-    public LocalCreateDirectoryCommand(LocalFileSystem fileSystem, FileConnector config)
+    public LocalCreateDirectoryCommand(LocalFileSystem fileSystem)
     {
-        super(fileSystem, config);
+        super(fileSystem);
     }
 
     /**
@@ -40,7 +40,7 @@ public final class LocalCreateDirectoryCommand extends LocalFileCommand implemen
     {
         if (StringUtils.isBlank(basePath))
         {
-            basePath = config.getBaseDir();
+            basePath = fileSystem.getBaseDir();
         }
 
         Path base = resolveExistingPath(basePath);

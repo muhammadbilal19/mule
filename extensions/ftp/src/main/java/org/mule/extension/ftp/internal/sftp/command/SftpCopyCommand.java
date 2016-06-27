@@ -30,9 +30,9 @@ public class SftpCopyCommand extends SftpCommand implements CopyCommand
     /**
      * {@inheritDoc}
      */
-    public SftpCopyCommand(SftpFileSystem fileSystem, FtpConnector config, SftpClient client)
+    public SftpCopyCommand(SftpFileSystem fileSystem, SftpClient client)
     {
-        super(fileSystem, config, client);
+        super(fileSystem, client);
     }
 
     /**

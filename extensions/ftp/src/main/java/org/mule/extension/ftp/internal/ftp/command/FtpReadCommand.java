@@ -36,9 +36,9 @@ public final class FtpReadCommand extends ClassicFtpCommand implements ReadComma
     /**
      * {@inheritDoc}
      */
-    public FtpReadCommand(ClassicFtpFileSystem fileSystem, FtpConnector config, FTPClient client)
+    public FtpReadCommand(ClassicFtpFileSystem fileSystem, FTPClient client)
     {
-        super(fileSystem, config, client);
+        super(fileSystem, client);
     }
 
     /**

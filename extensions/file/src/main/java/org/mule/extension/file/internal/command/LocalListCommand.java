@@ -6,10 +6,9 @@
  */
 package org.mule.extension.file.internal.command;
 
-import org.mule.runtime.api.message.MuleMessage;
-import org.mule.extension.file.api.FileConnector;
 import org.mule.extension.file.api.LocalFileAttributes;
 import org.mule.extension.file.api.LocalFileSystem;
+import org.mule.runtime.api.message.MuleMessage;
 import org.mule.runtime.module.extension.file.api.FileAttributes;
 import org.mule.runtime.module.extension.file.api.TreeNode;
 import org.mule.runtime.module.extension.file.api.command.ListCommand;
@@ -30,9 +29,9 @@ public final class LocalListCommand extends LocalFileCommand implements ListComm
     /**
      * {@inheritDoc}
      */
-    public LocalListCommand(LocalFileSystem fileSystem, FileConnector config)
+    public LocalListCommand(LocalFileSystem fileSystem)
     {
-        super(fileSystem, config);
+        super(fileSystem);
     }
 
     /**

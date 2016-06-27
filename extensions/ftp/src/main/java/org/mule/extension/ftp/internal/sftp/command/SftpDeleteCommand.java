@@ -6,7 +6,6 @@
  */
 package org.mule.extension.ftp.internal.sftp.command;
 
-import org.mule.extension.ftp.api.FtpConnector;
 import org.mule.extension.ftp.api.sftp.SftpFileSystem;
 import org.mule.extension.ftp.internal.sftp.connection.SftpClient;
 import org.mule.runtime.module.extension.file.api.FileAttributes;
@@ -31,9 +30,9 @@ public final class SftpDeleteCommand extends SftpCommand implements DeleteComman
     /**
      * {@inheritDoc}
      */
-    public SftpDeleteCommand(SftpFileSystem fileSystem, FtpConnector config, SftpClient client)
+    public SftpDeleteCommand(SftpFileSystem fileSystem, SftpClient client)
     {
-        super(fileSystem, config, client);
+        super(fileSystem, client);
     }
 
     /**

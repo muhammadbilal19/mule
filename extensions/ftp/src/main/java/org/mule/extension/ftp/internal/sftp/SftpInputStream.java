@@ -6,7 +6,6 @@
  */
 package org.mule.extension.ftp.internal.sftp;
 
-import org.mule.extension.ftp.api.FtpConnector;
 import org.mule.extension.ftp.api.FtpFileAttributes;
 import org.mule.extension.ftp.api.ftp.FtpFileSystem;
 import org.mule.extension.ftp.internal.FtpInputStream;
@@ -31,15 +30,14 @@ public class SftpInputStream extends FtpInputStream
      * <p>
      * Instances returned by this method <b>MUST</b> be closed or fully consumed.
      *
-     * @param config     the {@link FtpConnector} which is configuring the connection
      * @param attributes a {@link FileAttributes} referencing the file which contents are to be fetched
      * @param lock       the {@link PathLock} to be used
      * @return a new {@link FtpInputStream}
      * @throws ConnectionException if a connection could not be established
      */
-    public static FtpInputStream newInstance(FtpConnector config, FtpFileAttributes attributes, PathLock lock) throws ConnectionException
+    public static FtpInputStream newInstance(FtpFileAttributes attributes, PathLock lock) throws ConnectionException
     {
-        ConnectionHandler<FtpFileSystem> connectionHandler = getConnectionHandler(config);
+        ConnectionHandler<FtpFileSystem> connectionHandler = getConnectionHandler();
         return new SftpInputStream(getStreamSupplier(attributes, connectionHandler), connectionHandler, lock);
     }
 

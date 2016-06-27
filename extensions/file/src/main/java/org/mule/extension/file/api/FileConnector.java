@@ -47,16 +47,6 @@ public class FileConnector extends FileConnectorConfig
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(FileConnector.class);
 
-    /**
-     * The directory to be considered as the root of every
-     * relative path used with this connector. If not provided,
-     * it will default to the value of the {@code user.home}
-     * system property. If that system property is not set,
-     * then the connector will fail to initialise.
-     */
-    @Parameter
-    @Optional
-    private String baseDir;
 
     @Override
     protected void doInitialise() throws InitialisationException

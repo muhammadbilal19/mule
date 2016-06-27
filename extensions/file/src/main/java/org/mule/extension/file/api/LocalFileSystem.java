@@ -61,10 +61,8 @@ public final class LocalFileSystem extends AbstractFileSystem
 
     /**
      * Creates a new instance
-     *
-     * @param config a {@link FileConnector} which acts as a config
      */
-    public LocalFileSystem(FileConnector config, MuleContext muleContext)
+    public LocalFileSystem(MuleContext muleContext)
     {
         copyCommand = new LocalCopyCommand(this, config);
         createDirectoryCommand = new LocalCreateDirectoryCommand(this, config);

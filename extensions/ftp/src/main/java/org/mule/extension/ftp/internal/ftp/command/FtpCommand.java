@@ -27,11 +27,10 @@ import org.slf4j.LoggerFactory;
 /**
  * Base class for {@link FileCommand} implementations that target a FTP/SFTP server
  *
- * @param <Config>     the generic type of the connector's config
  * @param <Connection> the generic type of the connection object
  * @since 4.0
  */
-public abstract class FtpCommand<Config extends FtpConnector, Connection extends FtpFileSystem> extends FileCommand<Config, Connection>
+public abstract class FtpCommand<Connection extends FtpFileSystem> extends FileCommand<Connection>
 {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FtpCommand.class);
@@ -40,11 +39,10 @@ public abstract class FtpCommand<Config extends FtpConnector, Connection extends
      * Creates a new instance
      *
      * @param fileSystem a {@link FtpFileSystem} used as the connection object
-     * @param config     a {@link FtpConnector} which configures this command
      */
-    public FtpCommand(Connection fileSystem, Config config)
+    public FtpCommand(Connection fileSystem)
     {
-        super(fileSystem, config);
+        super(fileSystem);
     }
 
     /**
@@ -132,7 +130,7 @@ public abstract class FtpCommand<Config extends FtpConnector, Connection extends
      * Template method that renames the file at {@code filePath} to {@code newName}.
      * <p>
      * This method performs path resolution and validation and eventually delegates
-     * into {@link #doRename(String, String, boolean)}, in which the actual renaming implementation
+     * into {@link #doRename(String, String)}, in which the actual renaming implementation
      * is.
      *
      * @param filePath  the path of the file to be renamed
@@ -188,7 +186,7 @@ public abstract class FtpCommand<Config extends FtpConnector, Connection extends
             throw new IllegalArgumentException(format("Directory '%s' already exists", directoryName));
         }
 
-        final Path directoryPath = Paths.get(config.getBaseDir()).resolve(directoryName);
+        final Path directoryPath = Paths.get(fileSystem.getBaseDir()).resolve(directoryName);
         mkdirs(directoryPath);
     }
 

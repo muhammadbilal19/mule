@@ -10,7 +10,6 @@ import static java.lang.String.format;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
-import org.mule.extension.file.api.FileConnector;
 import org.mule.extension.file.api.LocalFileSystem;
 import org.mule.runtime.api.message.MuleEvent;
 import org.mule.runtime.core.api.MuleContext;
@@ -43,9 +42,9 @@ public final class LocalWriteCommand extends LocalFileCommand implements WriteCo
     /**
      * {@inheritDoc}
      */
-    public LocalWriteCommand(LocalFileSystem fileSystem, FileConnector config, MuleContext muleContext)
+    public LocalWriteCommand(LocalFileSystem fileSystem, MuleContext muleContext)
     {
-        super(fileSystem, config);
+        super(fileSystem);
         this.muleContext = muleContext;
     }
 

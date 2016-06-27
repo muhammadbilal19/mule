@@ -31,20 +31,17 @@ import java.nio.file.Paths;
 public abstract class AbstractFtpCopyDelegate implements FtpCopyDelegate
 {
 
-    private final FtpConnector config;
     private final FtpCommand command;
     private final FtpFileSystem fileSystem;
 
     /**
      * Creates new instance
      *
-     * @param config     a {@link FtpConnector}
      * @param command    the {@link FtpCommand} which requested this operation
      * @param fileSystem the {@link FtpFileSystem} which connects to the remote server
      */
-    public AbstractFtpCopyDelegate(FtpConnector config, FtpCommand command, FtpFileSystem fileSystem)
+    public AbstractFtpCopyDelegate(FtpCommand command, FtpFileSystem fileSystem)
     {
-        this.config = config;
         this.command = command;
         this.fileSystem = fileSystem;
     }

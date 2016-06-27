@@ -31,7 +31,7 @@ import java.util.Set;
  * @since 4.0
  */
 @Alias("sftp")
-public class SftpConnectionProvider extends AbstractFtpConnectionProvider<FtpConnector, SftpFileSystem>
+public class SftpConnectionProvider extends AbstractFtpConnectionProvider<SftpFileSystem>
 {
 
     /**
@@ -91,10 +91,10 @@ public class SftpConnectionProvider extends AbstractFtpConnectionProvider<FtpCon
     private SftpClientFactory clientFactory = new SftpClientFactory();
 
     @Override
-    public SftpFileSystem connect(FtpConnector config) throws ConnectionException
+    public SftpFileSystem connect() throws ConnectionException
     {
         SftpClient client = clientFactory.createInstance(getHost(), port);
-        client.setConnectionTimeoutMillis(config.getConnectionTimeoutUnit().toMillis(config.getConnectionTimeout()));
+        client.setConnectionTimeoutMillis(getConnectionTimeoutUnit().toMillis(getConnectionTimeout()));
         client.setPassword(password);
         client.setIdentity(identityFile, passphrase);
         if (!CollectionUtils.isEmpty(preferredAuthenticationMethods))
@@ -111,7 +111,7 @@ public class SftpConnectionProvider extends AbstractFtpConnectionProvider<FtpCon
             throw new ConnectionException(e);
         }
 
-        return new SftpFileSystem(config, client, muleContext);
+        return new SftpFileSystem(null, client, muleContext);
     }
 
 
@@ -119,18 +119,18 @@ public class SftpConnectionProvider extends AbstractFtpConnectionProvider<FtpCon
      * {@inheritDoc}
      */
     @Override
-    public ConnectionHandlingStrategy<SftpFileSystem> getHandlingStrategy(ConnectionHandlingStrategyFactory<FtpConnector, SftpFileSystem> handlingStrategyFactory)
+    public ConnectionHandlingStrategy<SftpFileSystem> getHandlingStrategy(ConnectionHandlingStrategyFactory<SftpFileSystem> handlingStrategyFactory)
     {
-        return handlingStrategyFactory.supportsPooling(new PoolingListener<FtpConnector, SftpFileSystem>()
+        return handlingStrategyFactory.supportsPooling(new PoolingListener<SftpFileSystem>()
         {
             @Override
-            public void onBorrow(FtpConnector config, SftpFileSystem connection)
+            public void onBorrow(SftpFileSystem connection)
             {
                 connection.changeToBaseDir();
             }
 
             @Override
-            public void onReturn(FtpConnector sftpConfig, SftpFileSystem sftpFileSystem)
+            public void onReturn(SftpFileSystem sftpFileSystem)
             {
             }
         });

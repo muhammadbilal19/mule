@@ -7,10 +7,9 @@
 package org.mule.extension.file.internal.command;
 
 import static java.lang.String.format;
-import org.mule.extension.file.api.FileConnector;
 import org.mule.extension.file.api.LocalFileSystem;
-import org.mule.runtime.module.extension.file.api.command.DeleteCommand;
 import org.mule.runtime.core.util.FileUtils;
+import org.mule.runtime.module.extension.file.api.command.DeleteCommand;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -32,9 +31,9 @@ public final class LocalDeleteCommand extends LocalFileCommand implements Delete
     /**
      * {@inheritDoc}
      */
-    public LocalDeleteCommand(LocalFileSystem fileSystem, FileConnector config)
+    public LocalDeleteCommand(LocalFileSystem fileSystem)
     {
-        super(fileSystem, config);
+        super(fileSystem);
     }
 
     /**

@@ -6,7 +6,6 @@
  */
 package org.mule.extension.ftp.internal.ftp.command;
 
-import org.mule.extension.ftp.api.FtpConnector;
 import org.mule.extension.ftp.internal.ftp.connection.ClassicFtpFileSystem;
 import org.mule.runtime.module.extension.file.api.command.RenameCommand;
 
@@ -23,9 +22,9 @@ public final class FtpRenameCommand extends ClassicFtpCommand implements RenameC
     /**
      * {@inheritDoc}
      */
-    public FtpRenameCommand(ClassicFtpFileSystem fileSystem, FtpConnector config, FTPClient client)
+    public FtpRenameCommand(ClassicFtpFileSystem fileSystem, FTPClient client)
     {
-        super(fileSystem, config, client);
+        super(fileSystem, client);
     }
 
     /**

@@ -11,6 +11,8 @@ import org.mule.runtime.api.connection.ConnectionHandlingStrategyFactory;
 import org.mule.runtime.api.connection.ConnectionProvider;
 import org.mule.runtime.api.connection.ConnectionValidationResult;
 import org.mule.runtime.core.api.MuleContext;
+import org.mule.runtime.extension.api.annotation.Parameter;
+import org.mule.runtime.extension.api.annotation.param.Optional;
 import org.mule.runtime.module.extension.file.api.FileSystem;
 
 import javax.inject.Inject;
@@ -21,10 +23,21 @@ import javax.inject.Inject;
  *
  * @since 4.0
  */
-public final class LocalFileConnectionProvider implements ConnectionProvider<FileConnector, FileSystem>
+public final class LocalFileConnectionProvider implements ConnectionProvider<FileSystem>
 {
     @Inject
     private MuleContext muleContext;
+
+    /**
+     * The directory to be considered as the root of every
+     * relative path used with this connector. If not provided,
+     * it will default to the value of the {@code user.home}
+     * system property. If that system property is not set,
+     * then the connector will fail to initialise.
+     */
+    @Parameter
+    @Optional
+    private String baseDir;
 
     /**
      * Creates and returns a new instance of {@link LocalFileSystem}
@@ -33,7 +46,7 @@ public final class LocalFileConnectionProvider implements ConnectionProvider<Fil
      * @return a {@link LocalFileSystem}
      */
     @Override
-    public FileSystem connect(FileConnector fileConnector)
+    public FileSystem connect()
     {
         return new LocalFileSystem(fileConnector, muleContext);
     }

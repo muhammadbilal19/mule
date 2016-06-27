@@ -9,7 +9,6 @@ package org.mule.extension.file.internal.command;
 import static java.lang.String.format;
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import org.mule.extension.file.api.FileConnector;
 import org.mule.extension.file.api.LocalFileSystem;
 import org.mule.runtime.module.extension.file.api.command.RenameCommand;
 
@@ -27,9 +26,9 @@ public final class LocalRenameCommand extends LocalFileCommand implements Rename
     /**
      * {@inheritDoc}
      */
-    public LocalRenameCommand(LocalFileSystem fileSystem, FileConnector config)
+    public LocalRenameCommand(LocalFileSystem fileSystem)
     {
-        super(fileSystem, config);
+        super(fileSystem);
     }
 
     /**

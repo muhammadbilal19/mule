@@ -39,9 +39,9 @@ public abstract class FtpInputStream extends AbstractFileInputStream
     private final ConnectionHandler<FtpFileSystem> connectionHandler;
     private final FtpFileSystem ftpFileSystem;
 
-    protected static ConnectionHandler<FtpFileSystem> getConnectionHandler(FtpConnector config) throws ConnectionException
+    protected static ConnectionHandler<FtpFileSystem> getConnectionHandler() throws ConnectionException
     {
-        return config.getConnectionManager().getConnection(config);
+        return config.getConnectionManager().getConnection();
     }
 
     protected static Supplier<InputStream> getStreamSupplier(FtpFileAttributes attributes, ConnectionHandler<FtpFileSystem> connectionHandler)

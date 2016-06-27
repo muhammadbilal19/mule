@@ -22,15 +22,15 @@ import java.nio.file.Paths;
  *
  * @since 4.0
  */
-abstract class LocalFileCommand extends FileCommand<FileConnector, LocalFileSystem>
+abstract class LocalFileCommand extends FileCommand<LocalFileSystem>
 {
 
     /**
      * {@inheritDoc}
      */
-    LocalFileCommand(LocalFileSystem fileSystem, FileConnector config)
+    LocalFileCommand(LocalFileSystem fileSystem)
     {
-        super(fileSystem, config);
+        super(fileSystem);
     }
 
     /**
@@ -39,7 +39,7 @@ abstract class LocalFileCommand extends FileCommand<FileConnector, LocalFileSyst
     @Override
     protected Path getBasePath()
     {
-        return Paths.get(config.getBaseDir());
+        return Paths.get(fileSystem.getBaseDir());
     }
 
     /**

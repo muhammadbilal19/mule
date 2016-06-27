@@ -6,7 +6,6 @@
  */
 package org.mule.extension.ftp.internal.sftp.command;
 
-import org.mule.extension.ftp.api.FtpConnector;
 import org.mule.extension.ftp.api.sftp.SftpFileSystem;
 import org.mule.extension.ftp.internal.ftp.command.MoveFtpDelegate;
 import org.mule.extension.ftp.internal.sftp.connection.SftpClient;
@@ -28,9 +27,9 @@ public class SftpMoveCommand extends SftpCommand implements MoveCommand
     /**
      * {@inheritDoc}
      */
-    public SftpMoveCommand(SftpFileSystem fileSystem, FtpConnector config, SftpClient client)
+    public SftpMoveCommand(SftpFileSystem fileSystem, SftpClient client)
     {
-        super(fileSystem, config, client);
+        super(fileSystem, client);
     }
 
     /**

@@ -23,7 +23,7 @@ import javax.inject.Inject;
 
 ;
 
-public abstract class PetStoreConnectionProvider implements ConnectionProvider<PetStoreConnector, PetStoreClient>, Lifecycle
+public abstract class PetStoreConnectionProvider implements ConnectionProvider<PetStoreClient>, Lifecycle
 {
 
     public static final String USER = "john";
@@ -50,7 +50,7 @@ public abstract class PetStoreConnectionProvider implements ConnectionProvider<P
     private ThreadingProfile threadingProfile;
 
     @Override
-    public PetStoreClient connect(PetStoreConnector config)
+    public PetStoreClient connect()
     {
         return new PetStoreClient(username, password, tls, threadingProfile);
     }

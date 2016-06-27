@@ -8,7 +8,6 @@ package org.mule.extension.ftp.internal.sftp.command;
 
 import static org.mule.runtime.module.extension.file.api.TreeNode.Builder.forDirectory;
 import static org.mule.runtime.module.extension.file.api.TreeNode.Builder.forFile;
-import org.mule.extension.ftp.api.FtpConnector;
 import org.mule.extension.ftp.api.sftp.SftpFileSystem;
 import org.mule.extension.ftp.internal.sftp.SftpFileAttributes;
 import org.mule.extension.ftp.internal.sftp.connection.SftpClient;
@@ -37,9 +36,9 @@ public final class SftpListCommand extends SftpCommand implements ListCommand
     /**
      * {@inheritDoc}
      */
-    public SftpListCommand(SftpFileSystem fileSystem, FtpConnector config, SftpClient client)
+    public SftpListCommand(SftpFileSystem fileSystem, SftpClient client)
     {
-        super(fileSystem, config, client);
+        super(fileSystem, client);
     }
 
     /**

@@ -6,7 +6,6 @@
  */
 package org.mule.extension.ftp.internal.sftp.command;
 
-import org.mule.extension.ftp.api.FtpConnector;
 import org.mule.extension.ftp.api.FtpFileAttributes;
 import org.mule.extension.ftp.api.sftp.SftpFileSystem;
 import org.mule.extension.ftp.internal.sftp.SftpInputStream;
@@ -34,9 +33,9 @@ public final class SftpReadCommand extends SftpCommand implements ReadCommand
     /**
      * {@inheritDoc}
      */
-    public SftpReadCommand(SftpFileSystem fileSystem, FtpConnector config, SftpClient client)
+    public SftpReadCommand(SftpFileSystem fileSystem, SftpClient client)
     {
-        super(fileSystem, config, client);
+        super(fileSystem, client);
     }
 
     /**
@@ -66,7 +65,7 @@ public final class SftpReadCommand extends SftpCommand implements ReadCommand
 
         try
         {
-            return new DefaultMuleMessage(SftpInputStream.newInstance(config, attributes, pathLock),
+            return new DefaultMuleMessage(SftpInputStream.newInstance(attributes, pathLock),
                                           fileSystem.getFileMessageDataType(message.getDataType(), attributes),
                                           attributes).asNewMessage();
         }

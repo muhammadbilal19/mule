@@ -10,7 +10,6 @@ import static java.lang.String.format;
 import static org.mule.runtime.core.config.i18n.MessageFactory.createStaticMessage;
 import org.mule.runtime.api.message.MuleMessage;
 import org.mule.runtime.core.api.MuleRuntimeException;
-import org.mule.runtime.module.extension.file.api.FileConnectorConfig;
 import org.mule.runtime.module.extension.file.api.FileSystem;
 
 import java.nio.file.Path;
@@ -24,28 +23,24 @@ import org.slf4j.LoggerFactory;
  * Base class for implementations of the Command design pattern which
  * performs operations on a file system
  *
- * @param <C> the generic type of the {@link FileConnectorConfig} which configures the operation
  * @param <F> the generic type of the {@link FileSystem} on which the operation is performed
  * @since 4.0
  */
-public abstract class FileCommand<C extends FileConnectorConfig, F extends FileSystem>
+public abstract class FileCommand<F extends FileSystem>
 {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FileCommand.class);
 
     protected final F fileSystem;
-    protected final C config;
 
     /**
      * Creates a new instance
      *
      * @param fileSystem the {@link FileSystem} on which the operation is performed
-     * @param config     the config which configures the operation
      */
-    protected FileCommand(F fileSystem, C config)
+    protected FileCommand(F fileSystem)
     {
         this.fileSystem = fileSystem;
-        this.config = config;
     }
 
     /**

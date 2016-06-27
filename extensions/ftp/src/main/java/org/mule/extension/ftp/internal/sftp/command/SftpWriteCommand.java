@@ -7,7 +7,6 @@
 package org.mule.extension.ftp.internal.sftp.command;
 
 import static java.lang.String.format;
-import org.mule.extension.ftp.api.FtpConnector;
 import org.mule.extension.ftp.api.sftp.SftpFileSystem;
 import org.mule.extension.ftp.internal.sftp.connection.SftpClient;
 import org.mule.runtime.api.message.MuleEvent;
@@ -39,9 +38,9 @@ public final class SftpWriteCommand extends SftpCommand implements WriteCommand
     /**
      * {@inheritDoc}
      */
-    public SftpWriteCommand(SftpFileSystem fileSystem, FtpConnector config, SftpClient client, MuleContext muleContext)
+    public SftpWriteCommand(SftpFileSystem fileSystem, SftpClient client, MuleContext muleContext)
     {
-        super(fileSystem, config, client);
+        super(fileSystem, client);
         this.muleContext = muleContext;
     }
 

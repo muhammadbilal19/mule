@@ -6,12 +6,11 @@
  */
 package org.mule.extension.file.internal.command;
 
-import org.mule.runtime.core.DefaultMuleMessage;
-import org.mule.runtime.api.message.MuleMessage;
-import org.mule.extension.file.api.FileConnector;
 import org.mule.extension.file.api.FileInputStream;
 import org.mule.extension.file.api.LocalFileAttributes;
 import org.mule.extension.file.api.LocalFileSystem;
+import org.mule.runtime.api.message.MuleMessage;
+import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.module.extension.file.api.FileAttributes;
 import org.mule.runtime.module.extension.file.api.command.ReadCommand;
 import org.mule.runtime.module.extension.file.api.lock.NullPathLock;
@@ -32,9 +31,9 @@ public final class LocalReadCommand extends LocalFileCommand implements ReadComm
     /**
      * {@inheritDoc}
      */
-    public LocalReadCommand(LocalFileSystem fileSystem, FileConnector config)
+    public LocalReadCommand(LocalFileSystem fileSystem)
     {
-        super(fileSystem, config);
+        super(fileSystem);
     }
 
     /**

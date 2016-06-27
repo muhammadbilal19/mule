@@ -34,9 +34,9 @@ public final class FtpCopyCommand extends ClassicFtpCommand implements CopyComma
     /**
      * {@inheritDoc}
      */
-    public FtpCopyCommand(ClassicFtpFileSystem fileSystem, FtpConnector config, FTPClient client)
+    public FtpCopyCommand(ClassicFtpFileSystem fileSystem, FTPClient client)
     {
-        super(fileSystem, config, client);
+        super(fileSystem, client);
     }
 
     /**
@@ -45,15 +45,15 @@ public final class FtpCopyCommand extends ClassicFtpCommand implements CopyComma
     @Override
     public void copy(String sourcePath, String targetPath, boolean overwrite, boolean createParentDirectories, MuleEvent event)
     {
-        copy(sourcePath, targetPath, overwrite, createParentDirectories, event, new RegularFtpCopyDelegate(config, this, fileSystem));
+        copy(sourcePath, targetPath, overwrite, createParentDirectories, event, new RegularFtpCopyDelegate(this, fileSystem));
     }
 
     private class RegularFtpCopyDelegate extends AbstractFtpCopyDelegate
     {
 
-        public RegularFtpCopyDelegate(FtpConnector config, FtpCommand command, FtpFileSystem fileSystem)
+        public RegularFtpCopyDelegate(FtpCommand command, FtpFileSystem fileSystem)
         {
-            super(config, command, fileSystem);
+            super(command, fileSystem);
         }
 
         @Override

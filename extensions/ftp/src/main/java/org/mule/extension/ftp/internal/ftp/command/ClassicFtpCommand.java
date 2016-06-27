@@ -6,7 +6,6 @@
  */
 package org.mule.extension.ftp.internal.ftp.command;
 
-import org.mule.extension.ftp.api.FtpConnector;
 import org.mule.extension.ftp.api.FtpFileAttributes;
 import org.mule.extension.ftp.internal.ftp.ClassicFtpFileAttributes;
 import org.mule.extension.ftp.internal.ftp.connection.ClassicFtpFileSystem;
@@ -27,7 +26,7 @@ import org.apache.commons.net.ftp.FTPFile;
  *
  * @since 4.0
  */
-abstract class ClassicFtpCommand extends FtpCommand<FtpConnector, ClassicFtpFileSystem>
+abstract class ClassicFtpCommand extends FtpCommand<ClassicFtpFileSystem>
 {
 
     protected final FTPClient client;
@@ -36,12 +35,11 @@ abstract class ClassicFtpCommand extends FtpCommand<FtpConnector, ClassicFtpFile
      * Creates a new instance
      *
      * @param fileSystem the {@link FileSystem} on which the operation is performed
-     * @param config     the config which configures the operation
      * @param client     a ready to use {@link FTPClient} to perform the operations
      */
-    ClassicFtpCommand(ClassicFtpFileSystem fileSystem, FtpConnector config, FTPClient client)
+    ClassicFtpCommand(ClassicFtpFileSystem fileSystem, FTPClient client)
     {
-        super(fileSystem, config);
+        super(fileSystem);
         this.client = client;
     }
 

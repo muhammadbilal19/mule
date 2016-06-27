@@ -6,7 +6,6 @@
  */
 package org.mule.extension.ftp.internal.sftp.command;
 
-import org.mule.extension.ftp.api.FtpConnector;
 import org.mule.extension.ftp.api.FtpFileAttributes;
 import org.mule.extension.ftp.api.sftp.SftpFileSystem;
 import org.mule.extension.ftp.internal.ftp.command.FtpCommand;
@@ -22,7 +21,7 @@ import java.util.Stack;
  *
  * @since 4.0
  */
-public abstract class SftpCommand extends FtpCommand<FtpConnector, SftpFileSystem>
+public abstract class SftpCommand extends FtpCommand<SftpFileSystem>
 {
 
     protected SftpClient client;
@@ -31,12 +30,11 @@ public abstract class SftpCommand extends FtpCommand<FtpConnector, SftpFileSyste
      * Creates a new instance
      *
      * @param fileSystem a {@link SftpFileSystem} used as the connection object
-     * @param config     a {@link FtpConnector} which configures this command
      * @param client     a {@link SftpClient}
      */
-    public SftpCommand(SftpFileSystem fileSystem, FtpConnector config, SftpClient client)
+    public SftpCommand(SftpFileSystem fileSystem, SftpClient client)
     {
-        super(fileSystem, config);
+        super(fileSystem);
         this.client = client;
     }
 
