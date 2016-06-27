@@ -30,20 +30,25 @@ public class UdpRequesterConnection extends AbstractUdpConnection implements Req
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UdpRequesterConnection.class);
     private final ConnectionSettings localAddressSettings;
+    private final String encoding;
 
-    public UdpRequesterConnection(ConnectionSettings connectionSettings, ConnectionSettings localAddressSettings,
-                                  UdpSocketProperties socketProperties) throws ConnectionException
+    public UdpRequesterConnection(ConnectionSettings connectionSettings,
+                                  ConnectionSettings localAddressSettings,
+                                  UdpSocketProperties socketProperties,
+                                  String encoding) throws ConnectionException
     {
         super(connectionSettings, socketProperties);
         this.localAddressSettings = localAddressSettings;
+        this.encoding = encoding;
     }
 
     /**
      * Configures a {@link DatagramSocket} with the settings provided in the {@link UdpSocketProperties} and
      * bounded to the connection settings presents on {@code localAddressSettings}.
-     *
+     * <p>
      * It does not invoke {@link DatagramSocket#connect(SocketAddress)}, because that will only allow the socket
      * to receive packages from the {@link SocketAddress} it has connected to.
+     *
      * @throws ConnectionException if the configuration of the {@link DatagramSocket} fails
      */
     @Override

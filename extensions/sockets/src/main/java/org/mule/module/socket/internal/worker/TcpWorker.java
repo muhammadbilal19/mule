@@ -50,13 +50,16 @@ public final class TcpWorker extends SocketWorker
     private Object notify = new Object();
     private boolean dataInWorkFinished = false;
     private AtomicBoolean moreMessages = new AtomicBoolean(true); // can be set on completion's callback
+    private final String encoding;
 
     public TcpWorker(Socket socket, TcpProtocol protocol, MuleContext muleContext,
-                     MessageHandler<InputStream, SocketAttributes> messageHandler) throws IOException
+                     MessageHandler<InputStream, SocketAttributes> messageHandler,
+                     String encoding) throws IOException
     {
         super(muleContext, messageHandler);
         this.socket = socket;
         this.protocol = protocol;
+        this.encoding = encoding;
 
         underlyingIn = new BufferedInputStream(socket.getInputStream());
         dataOut = new BufferedOutputStream(socket.getOutputStream());
@@ -176,7 +179,7 @@ public final class TcpWorker extends SocketWorker
                 {
                     try
                     {
-                        protocol.write(dataOut, muleEvent.getMessage().getPayload());
+                        protocol.write(dataOut, muleEvent.getMessage().getPayload(), encoding);
                         dataOut.flush();
                     }
                     catch (IOException e)

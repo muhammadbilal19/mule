@@ -55,9 +55,9 @@ public final class UdpRequesterProvider implements ConnectionProvider<RequesterC
     private ConnectionSettings localAddressSettings = new ConnectionSettings();
 
     @Override
-    public UdpRequesterConnection connect(RequesterConfig udpConfig) throws ConnectionException, UnresolvableHostException
+    public UdpRequesterConnection connect(RequesterConfig requesterConfig) throws ConnectionException, UnresolvableHostException
     {
-        UdpRequesterConnection connection = new UdpRequesterConnection(connectionSettings, localAddressSettings, udpSocketProperties);
+        UdpRequesterConnection connection = new UdpRequesterConnection(connectionSettings, localAddressSettings, udpSocketProperties, requesterConfig.getDefaultEncoding());
         connection.connect();
         return connection;
     }

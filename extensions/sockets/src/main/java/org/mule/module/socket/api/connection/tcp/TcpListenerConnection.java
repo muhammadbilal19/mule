@@ -44,14 +44,18 @@ public final class TcpListenerConnection extends AbstractTcpConnection implement
 
     private final TcpServerSocketProperties socketProperties;
     private final SimpleServerSocketFactory serverSocketFactory;
+    private final String encoding;
     private ServerSocket serverSocket;
 
-    public TcpListenerConnection(ConnectionSettings connectionSettings, TcpProtocol protocol, TcpServerSocketProperties socketProperties,
+    public TcpListenerConnection(ConnectionSettings connectionSettings, TcpProtocol protocol,
+                                 TcpServerSocketProperties socketProperties,
+                                 String encoding,
                                  SimpleServerSocketFactory serverSocketFactory) throws ConnectionException
     {
         super(connectionSettings, protocol);
         this.socketProperties = socketProperties;
         this.serverSocketFactory = serverSocketFactory;
+        this.encoding = encoding;
     }
 
     /**
@@ -69,7 +73,7 @@ public final class TcpListenerConnection extends AbstractTcpConnection implement
     {
         Socket newConnection = acceptConnection();
         configureConnection(newConnection, socketProperties);
-        return new TcpWorker(newConnection, protocol, muleContext, messageHandler);
+        return new TcpWorker(newConnection, protocol, muleContext, messageHandler, encoding);
     }
 
     @Override

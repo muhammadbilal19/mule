@@ -76,10 +76,11 @@ public class SafeProtocol extends AbstractByteProtocol
     /**
      * {@inheritDoc}
      */
-    public void write(OutputStream os, Object data) throws IOException
+    @Override
+    public void write(OutputStream os, Object data, String encoding) throws IOException
     {
-        assureSibling(os);
-        delegate.write(os, data);
+        assureSibling(os, encoding);
+        delegate.write(os, data, encoding);
     }
 
     /**
@@ -88,9 +89,9 @@ public class SafeProtocol extends AbstractByteProtocol
      * @param outputStream
      * @throws IOException
      */
-    private void assureSibling(OutputStream outputStream) throws IOException
+    private void assureSibling(OutputStream outputStream, String encoding) throws IOException
     {
-        cookieProtocol.write(outputStream, COOKIE);
+        cookieProtocol.write(outputStream, COOKIE, encoding);
     }
 
     /**

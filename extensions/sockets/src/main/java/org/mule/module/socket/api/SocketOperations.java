@@ -7,6 +7,7 @@
 package org.mule.module.socket.api;
 
 import org.mule.module.socket.api.client.SocketClient;
+import org.mule.module.socket.api.config.RequesterConfig;
 import org.mule.module.socket.api.connection.RequesterConnection;
 import org.mule.module.socket.internal.metadata.SocketMetadataResolver;
 import org.mule.runtime.api.connection.ConnectionException;
@@ -16,6 +17,7 @@ import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.extension.api.annotation.metadata.MetadataScope;
 import org.mule.runtime.extension.api.annotation.param.Connection;
 import org.mule.runtime.extension.api.annotation.param.Optional;
+import org.mule.runtime.extension.api.annotation.param.UseConfig;
 
 import java.io.IOException;
 
@@ -29,7 +31,7 @@ public class SocketOperations
 
     /**
      * Sends the data using the client associated to the {@link RequesterConnection}.
-     *
+     * <p>
      * If {@code hasResponse} is set, the operation blocks until  a response is received or the timeout is met,
      * in which case the operation will return a {@link MuleMessage}
      * with {@link NullPayload} as payload.
@@ -42,14 +44,20 @@ public class SocketOperations
      */
     @MetadataScope(outputResolver = SocketMetadataResolver.class, keysResolver = SocketMetadataResolver.class)
     public MuleMessage<?, ?> send(@Connection RequesterConnection connection,
+                                  @UseConfig RequesterConfig config,
+                                  @Optional String encoding,
                                   @Optional(defaultValue = "#[payload]") Object data,
                                   String hasResponse, // TODO Add metadata https://www.mulesoft.org/jira/browse/MULE-9894
-                                  @Optional(defaultValue = "UTF-8") String encoding, //TODO support encoding MULE-9900
                                   MuleMessage<?, ?> muleMessage) throws ConnectionException, IOException
     {
         SocketClient client = connection.getClient();
 
-        client.write(data);
+        if (encoding == null)
+        {
+            encoding = config.getDefaultEncoding();
+        }
+
+        client.write(data, encoding);
 
         return Boolean.valueOf(hasResponse) ?
                new DefaultMuleMessage(client.read(), client.getAttributes()) :

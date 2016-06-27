@@ -46,6 +46,8 @@ import org.mockito.runners.MockitoJUnitRunner;
 public class TcpReconnectionTestCase extends AbstractMuleTestCase
 {
 
+    private static String DEFAULT_ENCODING = "UTF-8";
+
     @Rule
     public DynamicPort dynamicPort = new DynamicPort("port");
 
@@ -84,7 +86,7 @@ public class TcpReconnectionTestCase extends AbstractMuleTestCase
         serverSocketProperties = new TcpServerSocketProperties();
         clientSocketProperties = new TcpClientSocketProperties();
 
-        listenerConnection = new TcpListenerConnection(connectionSettings, new SafeProtocol(), serverSocketProperties, new TcpServerSocketFactory());
+        listenerConnection = new TcpListenerConnection(connectionSettings, new SafeProtocol(), serverSocketProperties, DEFAULT_ENCODING, new TcpServerSocketFactory());
         requesterConnection = new TcpRequesterConnection(connectionSettings, new ConnectionSettings(), new SafeProtocol(), clientSocketProperties, new TcpSocketFactory());
     }
 
@@ -93,7 +95,7 @@ public class TcpReconnectionTestCase extends AbstractMuleTestCase
     {
         int invalidPort = -1;
         connectionSettings = new ConnectionSettings(invalidPort, host);
-        listenerConnection = new TcpListenerConnection(connectionSettings, new SafeProtocol(), serverSocketProperties, new TcpServerSocketFactory());
+        listenerConnection = new TcpListenerConnection(connectionSettings, new SafeProtocol(), serverSocketProperties, DEFAULT_ENCODING, new TcpServerSocketFactory());
         expectedException.expect(IllegalArgumentException.class);
         expectedException.expectMessage(format("port out of range:%d", invalidPort));
         listenerConnection.connect();
@@ -106,7 +108,7 @@ public class TcpReconnectionTestCase extends AbstractMuleTestCase
         expectedException.expectMessage(format("Could not bind socket to host '%s' and port '%d'", host, port));
         listenerConnection.connect();
 
-        TcpListenerConnection secondListener = new TcpListenerConnection(connectionSettings, new SafeProtocol(), serverSocketProperties, new TcpServerSocketFactory());
+        TcpListenerConnection secondListener = new TcpListenerConnection(connectionSettings, new SafeProtocol(), serverSocketProperties, DEFAULT_ENCODING, new TcpServerSocketFactory());
         secondListener.connect();
     }
 

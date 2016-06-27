@@ -92,7 +92,10 @@ public final class TcpListenerProvider implements ConnectionProvider<ListenerCon
             throw new MuleRuntimeException(e);
         }
 
-        TcpListenerConnection connection = new TcpListenerConnection(connectionSettings, protocol, tcpServerSocketProperties, serverSocketFactory);
+        TcpListenerConnection connection = new TcpListenerConnection(connectionSettings, protocol,
+                                                                     tcpServerSocketProperties,
+                                                                     listenerConfig.getDefaultEncoding(),
+                                                                     serverSocketFactory);
         connection.connect();
         return connection;
     }

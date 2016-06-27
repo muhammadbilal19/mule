@@ -29,9 +29,12 @@ import java.net.SocketTimeoutException;
 public class UdpListenerConnection extends AbstractUdpConnection implements ListenerConnection
 {
 
-    public UdpListenerConnection(ConnectionSettings connectionSettings, UdpSocketProperties socketProperties) throws ConnectionException
+    private final String encoding;
+
+    public UdpListenerConnection(ConnectionSettings connectionSettings, UdpSocketProperties socketProperties, String encoding) throws ConnectionException
     {
         super(connectionSettings, socketProperties);
+        this.encoding = encoding;
     }
 
     @Override
@@ -82,6 +85,6 @@ public class UdpListenerConnection extends AbstractUdpConnection implements List
 
         DatagramSocket newConnection = new DatagramSocket();
         configureConnection(newConnection, socketProperties);
-        return new UdpWorker(newConnection, packet, objectSerializer, muleContext, messageHandler);
+        return new UdpWorker(newConnection, packet, objectSerializer, muleContext, messageHandler, encoding);
     }
 }

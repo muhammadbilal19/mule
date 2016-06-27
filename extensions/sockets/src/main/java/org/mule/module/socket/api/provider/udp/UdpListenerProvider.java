@@ -47,9 +47,9 @@ public class UdpListenerProvider implements ConnectionProvider<ListenerConfig, U
     private UdpSocketProperties udpSocketProperties;
 
     @Override
-    public UdpListenerConnection connect(ListenerConfig config) throws ConnectionException, UnresolvableHostException
+    public UdpListenerConnection connect(ListenerConfig listenerConfig) throws ConnectionException, UnresolvableHostException
     {
-        UdpListenerConnection connection = new UdpListenerConnection(connectionSettings, udpSocketProperties);
+        UdpListenerConnection connection = new UdpListenerConnection(connectionSettings, udpSocketProperties, listenerConfig.getDefaultEncoding());
         connection.connect();
         return connection;
     }

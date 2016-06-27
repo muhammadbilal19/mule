@@ -41,13 +41,16 @@ public final class UdpWorker extends SocketWorker
     private final DatagramSocket socket;
     private final DatagramPacket packet;
     private final ObjectSerializer objectSerializer;
+    private final String encoding;
 
-    public UdpWorker(DatagramSocket socket, DatagramPacket packet, ObjectSerializer objectSerializer, MuleContext muleContext, MessageHandler<InputStream, SocketAttributes> messageHandler)
+    public UdpWorker(DatagramSocket socket, DatagramPacket packet, ObjectSerializer objectSerializer, MuleContext muleContext,
+                     MessageHandler<InputStream, SocketAttributes> messageHandler, String encoding)
     {
         super(muleContext, messageHandler);
         this.socket = socket;
         this.packet = packet;
         this.objectSerializer = objectSerializer;
+        this.encoding = encoding;
     }
 
     @Override
@@ -62,7 +65,7 @@ public final class UdpWorker extends SocketWorker
             {
                 try
                 {
-                    byte[] byteArray = getUdpAllowedByteArray(muleEvent.getMessage().getPayload(), objectSerializer);
+                    byte[] byteArray = getUdpAllowedByteArray(muleEvent.getMessage().getPayload(), encoding, objectSerializer);
                     DatagramPacket sendPacket = createPacket(byteArray);
                     sendPacket.setSocketAddress(packet.getSocketAddress());
                     socket.send(sendPacket);
