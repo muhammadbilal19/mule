@@ -23,6 +23,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+					<forkMode>perthread</forkMode>
+					<threadCount>1</threadCount>
+					<perCoreThreadCount>true</perCoreThreadCount>
                     <argLine>-Xmx512m -XX:MaxPermSize=128m</argLine>
                 </configuration>
             </plugin>
