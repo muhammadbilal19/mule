@@ -29,6 +29,8 @@ import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.core.api.MuleRuntimeException;
 import org.mule.runtime.core.api.MutableMuleMessage;
 import org.mule.runtime.core.api.ThreadSafeAccess;
+import org.mule.runtime.core.api.transformer.Transformer;
+import org.mule.runtime.core.api.transformer.TransformerException;
 import org.mule.runtime.core.config.i18n.CoreMessages;
 import org.mule.runtime.core.message.ds.ByteArrayDataSource;
 import org.mule.runtime.core.message.ds.InputStreamDataSource;
@@ -41,9 +43,14 @@ import org.mule.runtime.core.util.StringUtils;
 import org.mule.runtime.core.util.UUID;
 import org.mule.runtime.core.util.store.DeserializationPostInitialisable;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.URL;
 import java.util.ArrayList;
@@ -888,6 +895,145 @@ public class DefaultMuleMessage extends TypedValue<Object> implements MutableMul
         IllegalStateException exception = new IllegalStateException(message);
         logger.warn("Message access violation", exception);
         return exception;
+    }
+
+    public static class SerializedDataHandler implements Serializable
+    {
+        private static final long serialVersionUID = 1L;
+
+        private DataHandler handler;
+        private String contentType;
+        private Object contents;
+
+        public SerializedDataHandler(String name, DataHandler handler, MuleContext muleContext) throws IOException
+        {
+            if (handler != null && !(handler instanceof Serializable))
+            {
+                contentType = handler.getContentType();
+                Object theContent = handler.getContent();
+                if (theContent instanceof Serializable)
+                {
+                    contents = theContent;
+                }
+                else
+                {
+                    try
+                    {
+                        DataType source = DataType.fromObject(theContent);
+                        Transformer transformer = muleContext.getRegistry().lookupTransformer(source, DataType.BYTE_ARRAY);
+                        if (transformer == null)
+                        {
+                            throw new TransformerException(CoreMessages.noTransformerFoundForMessage(source, DataType.BYTE_ARRAY));
+                        }
+                        contents = transformer.transform(theContent);
+                    }
+                    catch(TransformerException ex)
+                    {
+                        String message = String.format(
+                                "Unable to serialize the attachment %s, which is of type %s with contents of type %s",
+                                name, handler.getClass(), theContent.getClass());
+                        logger.error(message);
+                        throw new IOException(message);
+                    }
+                }
+            }
+            else
+            {
+                this.handler = handler;
+            }
+        }
+
+        public DataHandler getHandler()
+        {
+            return contents != null ? new DataHandler(contents, contentType) : handler;
+        }
+    }
+
+    private void writeObject(ObjectOutputStream out) throws Exception
+    {
+        out.defaultWriteObject();
+        out.writeObject(serializeAttachments(inboundAttachments));
+        out.writeObject(serializeAttachments(outboundAttachments));
+    }
+
+    private Map<String, SerializedDataHandler> serializeAttachments(Map<String, DataHandler> attachments) throws IOException
+    {
+        Map<String, SerializedDataHandler> toWrite;
+        if (attachments == null)
+        {
+            toWrite = null;
+        }
+        else
+        {
+            toWrite = new HashMap<>(attachments.size());
+            for (Map.Entry<String, DataHandler> entry : attachments.entrySet())
+            {
+                String name = entry.getKey();
+                toWrite.put(name, new SerializedDataHandler(name, entry.getValue(), RequestContext.getEvent().getMuleContext()));
+            }
+        }
+
+        return toWrite;
+    }
+
+    @Override
+    protected void serializeValue(ObjectOutputStream out) throws Exception
+    {
+        if (getValue() instanceof Serializable)
+        {
+            out.writeBoolean(true);
+            out.writeObject(getValue());
+        }
+        else
+        {
+            out.writeBoolean(false);
+            byte[] valueAsByteArray = (byte[]) RequestContext.getEvent().getMuleContext().getTransformationService().transform(this, DataType.BYTE_ARRAY).getPayload();
+            out.writeInt(valueAsByteArray.length);
+            new DataOutputStream(out).write(valueAsByteArray);
+        }
+    }
+
+    @Override
+    protected void deserializeValue(ObjectInputStream in) throws Exception
+    {
+        boolean valueSerialized = in.readBoolean();
+        if (valueSerialized)
+        {
+            setValue(in.readObject());
+        }
+        else
+        {
+            int length = in.readInt();
+            byte[] valueAsByteArray = new byte[length];
+            new DataInputStream(in).readFully(valueAsByteArray);
+            setValue(valueAsByteArray);
+        }
+    }
+
+    private Map<String, DataHandler> deserializeAttachments(Map<String, SerializedDataHandler> attachments) throws IOException
+    {
+        Map<String, DataHandler> toReturn;
+        if (attachments == null)
+        {
+            toReturn = null;
+        }
+        else
+        {
+            toReturn = new HashMap<>(attachments.size());
+            for (Map.Entry<String, SerializedDataHandler> entry : attachments.entrySet())
+            {
+                toReturn.put(entry.getKey(), entry.getValue().getHandler());
+            }
+        }
+
+        return toReturn;
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException
+    {
+        in.defaultReadObject();
+        inboundAttachments = deserializeAttachments((Map<String, SerializedDataHandler>)in.readObject());
+        outboundAttachments = deserializeAttachments((Map<String, SerializedDataHandler>)in.readObject());
     }
 
     /**
