@@ -6,14 +6,18 @@
  */
 package org.mule.functional.junit4.runners;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.net.URL;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ClassLoaderURLsBuilder {
     protected final transient Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -96,8 +100,7 @@ public class ClassLoaderURLsBuilder {
         // Fix to handle when running test during an intall phase due to maven builds the classpath pointing out to packaged files instead of classes folders.
         final StringBuilder explodedUrlSuffix = new StringBuilder();
         final StringBuilder packagedUrlSuffix = new StringBuilder();
-        //TODO(pablo.kraan): fix that test modules like mule-test-integration are properly classified
-        if (artifact.isTestScope() && artifact.getType().equals("test-jar") || artifact.getArtifactId().contains("integration")) {
+        if (artifact.isTestScope() && artifact.getType().equals("test-jar")) {
             explodedUrlSuffix.append("test-classes/");
             packagedUrlSuffix.append(".*-tests.jar");
         } else {

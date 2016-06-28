@@ -22,7 +22,7 @@
         <AsyncLogger name="com.mulesoft" level="WARN"/>
 
         <!-- ClassLoader isolation -->
-        <!--<AsyncLogger name="org.mule.functional.junit4.runners" level="DEBUG"/>-->
+        <AsyncLogger name="org.mule.functional.junit4.runners" level="DEBUG"/>
 
         <AsyncRoot level="INFO">
             <AppenderRef ref="Console"/>
