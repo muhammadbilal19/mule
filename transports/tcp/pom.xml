@@ -21,7 +21,12 @@
             <artifactId>mule-transport-module-support</artifactId>
             <version>${project.version}</version>
         </dependency>
-
+        <!-- Dependency needed as compile but it was being resovled
+        from mule-tests-functional as test scope. -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+        </dependency>
         <!-- Unit tests -->
         <dependency>
             <groupId>org.mule.tests</groupId>

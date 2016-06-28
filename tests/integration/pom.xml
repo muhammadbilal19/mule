@@ -23,9 +23,32 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>-Xmx512m -XX:MaxPermSize=128m</argLine>
+                    <argLine> -Xmx1024m -Xms256m -XX:MaxPermSize=256m</argLine>
                 </configuration>
             </plugin>
+			<plugin>
+				<groupId>com.github.ferstl</groupId>
+				<artifactId>depgraph-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>depgraph-dependencies-graph</id>
+						<phase>process-resources</phase>
+					</execution>
+				</executions>
+			</plugin>
+			<!--<plugin>-->
+				<!--<groupId>org.apache.maven.plugins</groupId>-->
+				<!--<artifactId>maven-dependency-plugin</artifactId>-->
+				<!--<executions>-->
+					<!--<execution>-->
+						<!--<id>analyze-dependencies-for-extension</id>-->
+						<!--<phase>validate</phase>-->
+					<!--</execution>-->
+				<!--</executions>-->
+				<!--<configuration>-->
+					<!--<skip>true</skip>-->
+				<!--</configuration>-->
+			<!--</plugin>-->
 		</plugins>
 	</build>
 
@@ -82,12 +105,13 @@
 			<type>pom</type>
 			<scope>test</scope>
 		</dependency>
-		<!-- The ones that are packages as zip (plugins) have to be explicitly added-->
+		<!-- The ones that are packages as zip (plugins) have to be explicitly added with compile scope
+		     in order to be used with the artifact test runner
+		-->
 		<dependency>
 			<groupId>org.mule.modules</groupId>
 			<artifactId>mule-module-validation</artifactId>
 			<version>${project.version}</version>
-			<scope>test</scope>
 		</dependency>
 
 		<!-- Test jars -->

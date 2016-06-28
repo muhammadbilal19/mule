@@ -7,13 +7,13 @@
 package org.mule.test.integration.resolvers;
 
 import static org.junit.Assert.assertEquals;
+import org.mule.test.AbstractIntegrationTestCase;
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.MuleMessage;
-import org.mule.functional.junit4.FunctionalTestCase;
 
 import java.util.Map;
 
-public abstract class AbstractEntryPointResolverTestCase extends FunctionalTestCase
+public abstract class AbstractEntryPointResolverTestCase extends AbstractIntegrationTestCase
 {
 
     protected void doTest(String flowName, Object payload, String result) throws Exception

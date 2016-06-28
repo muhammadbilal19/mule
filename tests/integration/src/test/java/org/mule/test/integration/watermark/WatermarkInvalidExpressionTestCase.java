@@ -9,10 +9,11 @@ package org.mule.test.integration.watermark;
 
 import org.mule.runtime.core.api.config.ConfigurationException;
 import org.mule.functional.junit4.ApplicationContextBuilder;
+import org.mule.tck.junit4.AbstractMuleTestCase;
 
 import org.junit.Test;
 
-public class WatermarkInvalidExpressionTestCase
+public class WatermarkInvalidExpressionTestCase extends AbstractMuleTestCase
 {
 
     @Test(expected = ConfigurationException.class)

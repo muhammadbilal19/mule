@@ -10,7 +10,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import org.mule.functional.junit4.FunctionalTestCase;
+import org.mule.test.AbstractIntegrationTestCase;
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleEventContext;
@@ -34,7 +34,7 @@ import javax.activation.DataSource;
 
 import org.junit.Test;
 
-public class EventMetaDataPropagationTestCase extends FunctionalTestCase
+public class EventMetaDataPropagationTestCase extends AbstractIntegrationTestCase
 {
 
     @Override

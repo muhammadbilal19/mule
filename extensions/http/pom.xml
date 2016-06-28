@@ -16,26 +16,7 @@
     <name>Mule HTTP Extension</name>
     <description>A Mule extension that provides HTTP server and client functionality</description>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <!--TODO: https://www.mulesoft.org/jira/browse/MULE-9776 remove this when http is packages as zip plugin -->
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-
     <dependencies>
-        <dependency>
-            <groupId>org.mule</groupId>
-            <artifactId>mule-core</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
         <dependency>
             <groupId>org.mule.modules</groupId>
             <artifactId>mule-module-tls</artifactId>
@@ -46,7 +27,9 @@
             <groupId>org.mule.modules</groupId>
             <artifactId>mule-module-sockets</artifactId>
             <version>${project.version}</version>
-            <scope>provided</scope>
+            <!--TODO: MULE-9738 how to support multiple extensions being tested in same place (like here http needs sockets)-->
+            <!-- TODO: define this before merging this to mule-4.x!, compile scope won't work -->
+            <!--<scope>provided</scope>-->
         </dependency>
         <dependency>
             <groupId>org.mule.modules</groupId>
@@ -62,6 +45,10 @@
         <dependency>
             <groupId>org.glassfish.grizzly</groupId>
             <artifactId>grizzly-framework</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.grizzly</groupId>
+            <artifactId>grizzly-http</artifactId>
         </dependency>
         <dependency>
             <groupId>org.glassfish.grizzly</groupId>
@@ -119,8 +106,28 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.3.5</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+            <version>4.3.2</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-http</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -130,6 +137,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-
 </project>

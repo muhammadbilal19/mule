@@ -84,5 +84,4 @@ public class SocketsNamespaceHandlerTestCase extends FunctionalTestCase
         assertThat(properties.getTimeout(), equalTo(600));
         assertThat(properties.getLinger(), equalTo(700));
     }
-
 }

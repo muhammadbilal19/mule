@@ -144,6 +144,7 @@ public class CompositeClassLoader extends ClassLoader implements ClassLoaderLook
     }
 
     @Override
+    //TODO Should we delegate to its parent when the resource couldn't be obtained from the list of classloaders?
     public URL getResource(String name)
     {
         for (ClassLoader classLoader : classLoaders)

@@ -8,7 +8,7 @@ package org.mule.issues;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import org.mule.functional.junit4.FunctionalTestCase;
+import org.mule.test.AbstractIntegrationTestCase;
 import org.mule.runtime.core.DefaultMuleEvent;
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.MessageExchangePattern;
@@ -37,7 +37,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class PersistentStore6007TestCase extends FunctionalTestCase
+public class PersistentStore6007TestCase extends AbstractIntegrationTestCase
 {
     private static final Logger log = LoggerFactory.getLogger(PersistentStore6007TestCase.class);
 

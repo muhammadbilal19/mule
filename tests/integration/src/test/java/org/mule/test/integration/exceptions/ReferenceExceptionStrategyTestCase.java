@@ -9,15 +9,14 @@ package org.mule.test.integration.exceptions;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.junit.Assert.assertThat;
-
+import org.mule.test.AbstractIntegrationTestCase;
+import org.mule.runtime.api.message.NullPayload;
 import org.mule.runtime.core.api.MessagingException;
 import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.core.api.exception.MessagingExceptionHandler;
 import org.mule.runtime.core.component.ComponentException;
 import org.mule.runtime.core.exception.AbstractExceptionListener;
 import org.mule.runtime.core.exception.ChoiceMessagingExceptionStrategy;
-import org.mule.functional.junit4.FunctionalTestCase;
-import org.mule.runtime.api.message.NullPayload;
 
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -25,7 +24,7 @@ import org.hamcrest.core.IsNot;
 import org.hamcrest.core.IsNull;
 import org.junit.Test;
 
-public class ReferenceExceptionStrategyTestCase extends FunctionalTestCase
+public class ReferenceExceptionStrategyTestCase extends AbstractIntegrationTestCase
 {
     public static final int TIMEOUT = 5000;
     public static final String JSON_RESPONSE = "{\"errorMessage\":\"error processing news\",\"userId\":15,\"title\":\"News title\"}";

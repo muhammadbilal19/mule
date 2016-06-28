@@ -9,10 +9,10 @@ package org.mule.test.transformers;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import org.mule.test.AbstractIntegrationTestCase;
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleMessage;
-import org.mule.functional.junit4.FunctionalTestCase;
 import org.mule.runtime.core.util.IOUtils;
 
 import java.io.Serializable;
@@ -22,7 +22,7 @@ import java.util.Map;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.junit.Test;
 
-public class XQueryFunctionalTestCase extends FunctionalTestCase
+public class XQueryFunctionalTestCase extends AbstractIntegrationTestCase
 {
     @Override
     protected String getConfigFile()

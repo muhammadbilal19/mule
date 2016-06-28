@@ -8,12 +8,12 @@ package org.mule.test.integration.routing;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import org.mule.test.AbstractIntegrationTestCase;
 import org.mule.runtime.core.api.MuleMessage;
-import org.mule.functional.junit4.FunctionalTestCase;
 
 import org.junit.Test;
 
-public class FlowBridgingTestCase extends FunctionalTestCase
+public class FlowBridgingTestCase extends AbstractIntegrationTestCase
 {
 
     @Override

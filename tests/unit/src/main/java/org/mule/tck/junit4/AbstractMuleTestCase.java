@@ -8,11 +8,11 @@ package org.mule.tck.junit4;
 
 import static org.junit.Assume.assumeThat;
 import org.mule.runtime.core.RequestContext;
+import org.mule.tck.junit4.rule.WarningTimeout;
 import org.mule.runtime.core.util.MuleUrlStreamHandlerFactory;
 import org.mule.runtime.core.util.StringMessageUtils;
 import org.mule.runtime.core.util.StringUtils;
 import org.mule.runtime.core.util.SystemUtils;
-import org.mule.tck.junit4.rule.WarningTimeout;
 
 import java.util.ArrayList;
 import java.util.Collections;

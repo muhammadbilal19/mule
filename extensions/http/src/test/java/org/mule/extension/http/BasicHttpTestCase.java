@@ -13,7 +13,8 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import org.mule.extension.http.api.HttpConnector;
 import org.mule.extension.http.api.HttpRequestAttributes;
-import org.mule.functional.junit4.ExtensionFunctionalTestCase;
+import org.mule.functional.junit4.ArtifactFunctionalTestCase;
+import org.mule.functional.junit4.runners.ArtifactClassLoaderRunnerConfig;
 import org.mule.runtime.api.message.MuleMessage;
 import org.mule.runtime.api.message.NullPayload;
 import org.mule.runtime.core.api.MuleEvent;
@@ -45,7 +46,8 @@ import org.junit.Rule;
 import org.junit.Test;
 
 //TODO: MULE-9702 Remove once the tests are migrated.
-public class BasicHttpTestCase extends ExtensionFunctionalTestCase
+@ArtifactClassLoaderRunnerConfig(extensions = { HttpConnector.class })
+public class BasicHttpTestCase extends ArtifactFunctionalTestCase
 {
     @Rule
     public DynamicPort clientPort = new DynamicPort("clientPort");
@@ -63,12 +65,6 @@ public class BasicHttpTestCase extends ExtensionFunctionalTestCase
     protected String getConfigFile()
     {
         return "basic-http-config.xml";
-    }
-
-    @Override
-    protected Class<?>[] getAnnotatedExtensionClasses()
-    {
-        return new Class<?>[] {HttpConnector.class};
     }
 
     @Before

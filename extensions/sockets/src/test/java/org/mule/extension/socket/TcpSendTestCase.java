@@ -7,13 +7,9 @@
 package org.mule.extension.socket;
 
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-@RunWith(Parameterized.class)
 public class TcpSendTestCase extends ParameterizedProtocolTestCase
 {
-
 
     @Override
     protected String getConfigFile()

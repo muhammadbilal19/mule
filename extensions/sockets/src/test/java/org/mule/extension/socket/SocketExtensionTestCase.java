@@ -11,7 +11,8 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.junit.rules.ExpectedException.none;
-import org.mule.functional.junit4.ExtensionFunctionalTestCase;
+import org.mule.functional.junit4.ArtifactFunctionalTestCase;
+import org.mule.functional.junit4.runners.ArtifactClassLoaderRunnerConfig;
 import org.mule.module.socket.api.SocketsExtension;
 import org.mule.module.socket.api.source.SocketAttributes;
 import org.mule.runtime.api.message.MuleMessage;
@@ -39,7 +40,9 @@ import org.junit.rules.ExpectedException;
 /**
  * Base class with common behaviour for all the {@link SocketsExtension} test cases
  */
-public abstract class SocketExtensionTestCase extends ExtensionFunctionalTestCase
+//TODO: MULE-9702 Remove once the tests are migrated.
+@ArtifactClassLoaderRunnerConfig(extensions = SocketsExtension.class)
+public abstract class SocketExtensionTestCase extends ArtifactFunctionalTestCase
 {
 
     protected static final int TIMEOUT_MILLIS = 5000;
@@ -99,12 +102,6 @@ public abstract class SocketExtensionTestCase extends ExtensionFunctionalTestCas
     protected void doTearDown() throws Exception
     {
         receivedMessages = null;
-    }
-
-    @Override
-    protected Class<?>[] getAnnotatedExtensionClasses()
-    {
-        return new Class<?>[] {SocketsExtension.class};
     }
 
     public static void onIncomingConnection(MessageContext messageContext)

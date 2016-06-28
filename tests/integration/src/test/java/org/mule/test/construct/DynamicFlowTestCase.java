@@ -8,7 +8,7 @@ package org.mule.test.construct;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-
+import org.mule.test.AbstractIntegrationTestCase;
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.MuleEvent;
@@ -25,7 +25,6 @@ import org.mule.runtime.core.api.lifecycle.Lifecycle;
 import org.mule.runtime.core.api.processor.DynamicPipelineException;
 import org.mule.runtime.core.api.processor.MessageProcessor;
 import org.mule.runtime.core.construct.Flow;
-import org.mule.functional.junit4.FunctionalTestCase;
 import org.mule.runtime.core.transformer.simple.StringAppendTransformer;
 
 import java.util.ArrayList;
@@ -34,7 +33,7 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 
-public class DynamicFlowTestCase extends FunctionalTestCase
+public class DynamicFlowTestCase extends AbstractIntegrationTestCase
 {
 
     private MuleClient client;

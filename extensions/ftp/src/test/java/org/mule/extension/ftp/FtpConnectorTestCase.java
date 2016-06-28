@@ -9,7 +9,9 @@ package org.mule.extension.ftp;
 import static org.mule.extension.FtpTestHarness.HELLO_PATH;
 import org.mule.extension.FtpTestHarness;
 import org.mule.extension.ftp.api.FtpConnector;
-import org.mule.functional.junit4.ExtensionFunctionalTestCase;
+import org.mule.functional.junit4.ArtifactFunctionalTestCase;
+import org.mule.functional.junit4.runners.ArtifactClassLoaderRunnerConfig;
+import org.mule.functional.junit4.runners.RunnerDelegateTo;
 import org.mule.runtime.api.message.MuleEvent;
 import org.mule.runtime.api.message.MuleMessage;
 import org.mule.runtime.module.extension.file.api.FileWriteMode;
@@ -19,12 +21,12 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.junit.Rule;
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-@RunWith(Parameterized.class)
-public abstract class FtpConnectorTestCase extends ExtensionFunctionalTestCase
+@RunnerDelegateTo(Parameterized.class)
+@ArtifactClassLoaderRunnerConfig(extensions = FtpConnector.class)
+public abstract class FtpConnectorTestCase extends ArtifactFunctionalTestCase
 {
 
     private final String name;
@@ -45,12 +47,6 @@ public abstract class FtpConnectorTestCase extends ExtensionFunctionalTestCase
     {
         this.name = name;
         this.testHarness = testHarness;
-    }
-
-    @Override
-    protected Class<?>[] getAnnotatedExtensionClasses()
-    {
-        return new Class<?>[] {FtpConnector.class};
     }
 
     protected MuleEvent readHelloWorld() throws Exception

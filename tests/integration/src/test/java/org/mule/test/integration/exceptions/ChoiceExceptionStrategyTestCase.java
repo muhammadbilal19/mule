@@ -9,15 +9,14 @@ package org.mule.test.integration.exceptions;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.junit.Assert.assertThat;
-
+import org.mule.functional.functional.EventCallback;
+import org.mule.functional.functional.FunctionalTestComponent;
+import org.mule.test.AbstractIntegrationTestCase;
 import org.mule.runtime.core.api.MuleEventContext;
 import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.core.api.registry.ResolverException;
 import org.mule.runtime.core.component.ComponentException;
 import org.mule.runtime.core.config.i18n.CoreMessages;
-import org.mule.functional.functional.EventCallback;
-import org.mule.functional.functional.FunctionalTestComponent;
-import org.mule.functional.junit4.FunctionalTestCase;
 
 import java.sql.SQLDataException;
 
@@ -25,7 +24,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-public class ChoiceExceptionStrategyTestCase extends FunctionalTestCase
+public class ChoiceExceptionStrategyTestCase extends AbstractIntegrationTestCase
 {
     @Rule
     public ExpectedException expectedException = ExpectedException.none();

@@ -12,10 +12,7 @@ import org.mule.runtime.core.util.IOUtils;
 import java.io.InputStream;
 
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-@RunWith(Parameterized.class)
 public class TcpMultipleSendTestCase extends ParameterizedProtocolTestCase
 {
 

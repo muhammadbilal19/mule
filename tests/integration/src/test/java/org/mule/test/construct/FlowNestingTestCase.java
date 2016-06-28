@@ -9,10 +9,10 @@ package org.mule.test.construct;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import org.mule.test.AbstractIntegrationTestCase;
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.core.api.client.MuleClient;
-import org.mule.functional.junit4.FunctionalTestCase;
 import org.mule.tck.junit4.rule.DynamicPort;
 import org.mule.tck.testmodels.fruit.Apple;
 import org.mule.tck.testmodels.fruit.Orange;
@@ -24,7 +24,7 @@ import java.util.Map;
 import org.junit.Rule;
 import org.junit.Test;
 
-public class FlowNestingTestCase extends FunctionalTestCase
+public class FlowNestingTestCase extends AbstractIntegrationTestCase
 {
     @Rule
     public DynamicPort dynamicPort = new DynamicPort("port1");
