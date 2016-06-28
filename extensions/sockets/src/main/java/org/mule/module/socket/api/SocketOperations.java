@@ -38,6 +38,7 @@ public class SocketOperations
      *
      * @param data        that will be serialized and sent through the socket.
      * @param hasResponse whether the operation should await for a response or not
+     * @param outputEncoding encoding that will be used to serialize the {@code data} if its type is {@link String}.
      * @param muleMessage if there is no response expected, the outcome of the operation will be
      *                    the same {@link MuleMessage} as the input.
      * @throws ConnectionException if the connection couldn't be established, if the remote host was unavailable.
@@ -45,19 +46,19 @@ public class SocketOperations
     @MetadataScope(outputResolver = SocketMetadataResolver.class, keysResolver = SocketMetadataResolver.class)
     public MuleMessage<?, ?> send(@Connection RequesterConnection connection,
                                   @UseConfig RequesterConfig config,
-                                  @Optional String encoding,
+                                  @Optional String outputEncoding,
                                   @Optional(defaultValue = "#[payload]") Object data,
                                   String hasResponse, // TODO Add metadata https://www.mulesoft.org/jira/browse/MULE-9894
                                   MuleMessage<?, ?> muleMessage) throws ConnectionException, IOException
     {
         SocketClient client = connection.getClient();
 
-        if (encoding == null)
+        if (outputEncoding == null)
         {
-            encoding = config.getDefaultEncoding();
+            outputEncoding = config.getDefaultEncoding();
         }
 
-        client.write(data, encoding);
+        client.write(data, outputEncoding);
 
         return Boolean.valueOf(hasResponse) ?
                new DefaultMuleMessage(client.read(), client.getAttributes()) :

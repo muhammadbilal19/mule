@@ -25,14 +25,14 @@ public interface SocketClient
 
     /**
      * @param data to be written into the socket
-     * @param encoding to be used when writing contents
+     * @param outputEncoding to be used when writing contents
      * of type {@link String}. If not specified, it defaults
      * to the encoding specified in the config {@link AbstractSocketConfig}.
      * If no default is specified {@link AbstractSocketConfig} either, mule's default encoding is used.
      *
      * @throws IOException
      */
-    void write(Object data, String encoding) throws IOException;
+    void write(Object data, String outputEncoding) throws IOException;
 
     /**
      * This methods blocks until new data is available or {@link SocketProperties#getClientTimeout()} is reached, in
