@@ -14,6 +14,7 @@ import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleException;
 import org.mule.runtime.core.api.MuleMessage;
+import org.mule.runtime.core.api.MutableMuleMessage;
 import org.mule.runtime.core.api.ThreadSafeAccess;
 import org.mule.runtime.core.api.expression.ExpressionManager;
 import org.mule.runtime.core.api.processor.InternalMessageProcessor;
@@ -32,6 +33,7 @@ import org.mule.runtime.core.util.StringUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * The <code>Message Enricher</code> allows the current message to be augmented using data from a seperate
@@ -98,9 +100,14 @@ public class MessageEnricher extends AbstractMessageProcessorOwner implements No
         else
         {
             final TypedValue finalTypedValue = typedValue;
-            currentEvent.setMessage(currentEvent.getMessage().transform(msg -> {
-                msg.setPayload(finalTypedValue.getValue(), finalTypedValue.getDataType());
-                return msg;
+            currentEvent.setMessage(currentEvent.getMessage().transform(new Function<MutableMuleMessage, MuleMessage>()
+            {
+                @Override
+                public MuleMessage apply(MutableMuleMessage msg)
+                {
+                        msg.setPayload(finalTypedValue.getValue(), finalTypedValue.getDataType());
+                        return msg;
+                }
             }));
         }
     }

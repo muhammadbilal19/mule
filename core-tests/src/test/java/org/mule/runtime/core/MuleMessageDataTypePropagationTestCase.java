@@ -27,7 +27,6 @@ import static org.mule.runtime.core.api.config.MuleProperties.OBJECT_DEFAULT_RET
 import static org.mule.runtime.core.util.SystemUtils.getDefaultEncoding;
 import static org.mule.tck.MuleTestUtils.getTestEvent;
 import static org.mule.tck.junit4.matcher.DataTypeMatcher.like;
-
 import org.mule.runtime.api.message.NullPayload;
 import org.mule.runtime.api.metadata.DataType;
 import org.mule.runtime.api.metadata.MediaType;
@@ -42,6 +41,7 @@ import org.mule.tck.junit4.AbstractMuleTestCase;
 import org.mule.tck.size.SmallTest;
 
 import java.io.InputStream;
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.util.Collections;
 
@@ -229,8 +229,8 @@ public class MuleMessageDataTypePropagationTestCase extends AbstractMuleTestCase
 
         MuleEvent muleEvent = mock(MuleEvent.class);
 
-        MuleMessage result = transformationService.applyTransformers(muleMessage, muleEvent,
-                                                                     Collections.singletonList(transformer));
+        MuleMessage<Object, Serializable> result = transformationService.applyTransformers(muleMessage, muleEvent,
+                                                                                           Collections.singletonList(transformer));
 
         assertThat(result.getDataType().getType(), Matchers.<Class<?>>equalTo(RuntimeException.class));
     }
@@ -250,7 +250,7 @@ public class MuleMessageDataTypePropagationTestCase extends AbstractMuleTestCase
 
         MuleEvent muleEvent = mock(MuleEvent.class);
 
-        MuleMessage result = transformationService.applyTransformers(muleMessage, muleEvent,
+        MuleMessage<Object, Serializable> result = transformationService.applyTransformers(muleMessage, muleEvent,
                                                                      Collections.singletonList(transformer));
 
         assertThat(result.getDataType().getType(), Matchers.<Class<?>>equalTo(Object.class));
